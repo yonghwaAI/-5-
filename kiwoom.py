@@ -567,3 +567,5 @@ if __name__ == "__main__":
     #codes = kiwoom.SendCondition("0101", condition_name, condition_index, 0)
 
     #print(codes)
+    
+    ## 용화 수정해봤
