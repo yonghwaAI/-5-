@@ -2,7 +2,7 @@ from api.Kiwoom import *
 from util.make_up_universe import *
 from util.db_helper import *
 from util.time_helper import *
-from util.notifier import *
+# from util.notifier import *
 import math
 import traceback
 
