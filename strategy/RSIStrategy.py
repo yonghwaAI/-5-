@@ -5,16 +5,24 @@ from util.time_helper import *
 from util.notifier import *
 import math
 import traceback
-
+import sys
 
 class RSIStrategy(QThread):
     def __init__(self):
         QThread.__init__(self)
         self.strategy_name = "RSIStrategy"
         self.kiwoom = Kiwoom()
+        
+        # 유니버스 정보를 담을 딕셔너리
+        self.universe = {'069500':'kodex_200', '114800':'kodex_inverse'}
+
+        self.universe_df = pd.DataFrame({
+            'code': self.universe.keys(),
+            'code_name': self.universe.values()
+        })
 
         # 유니버스 정보를 담을 딕셔너리
-        self.universe = {}
+        '''self.universe = {}'''
 
         # 계좌 예수금
         self.deposit = 0
@@ -43,7 +51,7 @@ class RSIStrategy(QThread):
             self.deposit = self.kiwoom.get_deposit()
 
             # 유니버스 실시간 체결정보 등록
-            '''self.set_universe_real_time()'''
+            self.set_universe_real_time()
 
             self.is_init_success = True
 
@@ -145,9 +153,8 @@ class RSIStrategy(QThread):
             try:
                 # (0)장중인지 확인
                 if not check_transaction_open():
-                    print("장시간이 아니므로 5분간 대기합니다.")
-                    time.sleep(5 * 60)
-                    continue
+                    print("장시간이 아니므로 종료합니다.")
+                    sys.exit()
 
                 for idx, code in enumerate(self.universe.keys()):
                     print('[{}/{}_{}]'.format(idx + 1, len(self.universe), self.universe[code]['code_name']))
