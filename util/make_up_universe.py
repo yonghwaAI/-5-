@@ -1,4 +1,4 @@
-import requests
+"""import requests
 from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
@@ -143,3 +143,4 @@ if __name__ == "__main__":
     universe = get_universe()
     print(universe)
     print('End')
+    """
