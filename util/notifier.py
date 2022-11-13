@@ -1,4 +1,4 @@
-import requests
+'''import requests
 
 TARGET_URL = 'https://notify-api.line.me/api/notify'
 
@@ -22,4 +22,4 @@ def send_message(message, token=None):
             raise Exception('Fail need to check. Status is %s' % status)
 
     except Exception as e:
-        raise Exception(e)
+        raise Exception(e)'''

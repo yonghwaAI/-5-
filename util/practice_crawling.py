@@ -1,4 +1,4 @@
-import requests
+'''import requests
 from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
@@ -99,4 +99,4 @@ def crawler(code, page):
 if __name__ == "__main__":
     print('Start!')
     execute_crawler()
-    print('End')
+    print('End')'''
