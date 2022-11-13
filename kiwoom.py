@@ -1,3 +1,4 @@
+# 용화 오후 10시 00분
 import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QAxContainer import *
