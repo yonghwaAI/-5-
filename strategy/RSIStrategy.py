@@ -7,7 +7,6 @@ import math
 import traceback
 import sys
 
-
 class RSIStrategy(QThread):
     def __init__(self):
         QThread.__init__(self)
