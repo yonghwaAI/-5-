@@ -6,6 +6,7 @@ from util.notifier import *
 import math
 import traceback
 import sys
+import numpy as np
 
 class RSIStrategy(QThread):
     def __init__(self):
