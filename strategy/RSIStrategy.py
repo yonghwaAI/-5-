@@ -1,11 +1,12 @@
 from api.Kiwoom import *
-from util.make_up_universe import *
 from util.db_helper import *
 from util.time_helper import *
-# from util.notifier import *
 import math
 import traceback
+import sys
 
+# from util.make_up_universe import *
+# from util.notifier import *
 
 class RSIStrategy(QThread):
     def __init__(self):
@@ -14,7 +15,12 @@ class RSIStrategy(QThread):
         self.kiwoom = Kiwoom()
 
         # 유니버스 정보를 담을 딕셔너리
-        self.universe = {}
+        self.universe = {'069500':'kodex_200', '114800':'kodex_inverse'}
+
+        self.universe_df = pd.DataFrame({
+            'code': self.universe.keys(),
+            'code_name': self.universe.values()
+        })
 
         # 계좌 예수금
         self.deposit = 0
@@ -28,7 +34,7 @@ class RSIStrategy(QThread):
         """전략 초기화 기능을 수행하는 함수"""
         try:
             # 유니버스 조회, 없으면 생성
-            self.check_and_get_universe()
+            # self.check_and_get_universe()
 
             # 가격 정보를 조회, 필요하면 생성
             self.check_and_get_price_data()
@@ -51,48 +57,48 @@ class RSIStrategy(QThread):
             print(traceback.format_exc())
             # LINE 메시지를 보내는 부분 → 삭제
 
-    def check_and_get_universe(self):
-        """유니버스가 존재하는지 확인하고 없으면 생성하는 함수"""
-        if not check_table_exist(self.strategy_name, 'universe'):
-            universe_list = get_universe()
-            print(universe_list)
-            universe = {}
-            # 오늘 날짜를 20210101 형태로 지정
-            now = datetime.now().strftime("%Y%m%d")
+    # def check_and_get_universe(self):
+    #     """유니버스가 존재하는지 확인하고 없으면 생성하는 함수"""
+    #     if not check_table_exist(self.strategy_name, 'universe'):
+    #         universe_list = get_universe()
+    #         print(universe_list)
+    #         universe = {}
+    #         # 오늘 날짜를 20210101 형태로 지정
+    #         now = datetime.now().strftime("%Y%m%d")
 
-            # KOSPI(0)에 상장된 모든 종목 코드를 가져와 kospi_code_list에 저장
-            kospi_code_list = self.kiwoom.get_code_list_by_market("0")
+    #         # KOSPI(0)에 상장된 모든 종목 코드를 가져와 kospi_code_list에 저장
+    #         kospi_code_list = self.kiwoom.get_code_list_by_market("0")
 
-            # KOSDAQ(10)에 상장된 모든 종목 코드를 가져와 kosdaq_code_list에 저장
-            kosdaq_code_list = self.kiwoom.get_code_list_by_market("10")
+    #         # KOSDAQ(10)에 상장된 모든 종목 코드를 가져와 kosdaq_code_list에 저장
+    #         kosdaq_code_list = self.kiwoom.get_code_list_by_market("10")
 
-            for code in kospi_code_list + kosdaq_code_list:
-                # 모든 종목 코드를 바탕으로 반복문 수행
-                code_name = self.kiwoom.get_master_code_name(code)
+    #         for code in kospi_code_list + kosdaq_code_list:
+    #             # 모든 종목 코드를 바탕으로 반복문 수행
+    #             code_name = self.kiwoom.get_master_code_name(code)
 
-                # 얻어온 종목명이 유니버스에 포함되어 있다면 딕셔너리에 추가
-                if code_name in universe_list:
-                    universe[code] = code_name
+    #             # 얻어온 종목명이 유니버스에 포함되어 있다면 딕셔너리에 추가
+    #             if code_name in universe_list:
+    #                 universe[code] = code_name
 
-            # 코드, 종목명, 생성일자자를 열로 가지는 DaaFrame 생성
-            universe_df = pd.DataFrame({
-                'code': universe.keys(),
-                'code_name': universe.values(),
-                'created_at': [now] * len(universe.keys())
-            })
+    #         # 코드, 종목명, 생성일자를 열로 가지는 DaaFrame 생성
+    #         universe_df = pd.DataFrame({
+    #             'code': universe.keys(),
+    #             'code_name': universe.values(),
+    #             'created_at': [now] * len(universe.keys())
+    #         })
 
-            # universe라는 테이블명으로 Dataframe을 DB에 저장함
-            insert_df_to_db(self.strategy_name, 'universe', universe_df)
+    #         # universe라는 테이블명으로 Dataframe을 DB에 저장함
+    #         insert_df_to_db(self.strategy_name, 'universe', universe_df)
 
-        sql = "select * from universe"
-        cur = execute_sql(self.strategy_name, sql)
-        universe_list = cur.fetchall()
-        for item in universe_list:
-            idx, code, code_name, created_at = item
-            self.universe[code] = {
-                'code_name': code_name
-            }
-        print(self.universe)
+    #     sql = "select * from universe"
+    #     cur = execute_sql(self.strategy_name, sql)
+    #     universe_list = cur.fetchall()
+    #     for item in universe_list:
+    #         idx, code, code_name, created_at = item
+    #         self.universe[code] = {
+    #             'code_name': code_name
+    #         }
+    #     print(self.universe)
 
     def check_and_get_price_data(self):
         """일봉 데이터가 존재하는지 확인하고 없다면 생성하는 함수"""
@@ -144,9 +150,8 @@ class RSIStrategy(QThread):
             try:
                 # (0)장중인지 확인
                 if not check_transaction_open():
-                    print("장시간이 아니므로 5분간 대기합니다.")
-                    time.sleep(5 * 60)
-                    continue
+                    print("장시간이 아닙니다.")
+                    sys.exit()
 
                 for idx, code in enumerate(self.universe.keys()):
                     print('[{}/{}_{}]'.format(idx + 1, len(self.universe), self.universe[code]['code_name']))
