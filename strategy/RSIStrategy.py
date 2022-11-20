@@ -21,9 +21,6 @@ class RSIStrategy(QThread):
             'code_name': self.universe.values()
         })
 
-        # 유니버스 정보를 담을 딕셔너리
-        '''self.universe = {}'''
-
         # 계좌 예수금
         self.deposit = 0
 
@@ -262,9 +259,9 @@ class RSIStrategy(QThread):
         order_result = self.kiwoom.send_order('send_sell_order', '1001', 2, code, quantity, ask, '00')
 
         # LINE 메시지를 보내는 부분
-        '''message = "[{}]sell order is done! quantity:{}, ask:{}, order_result:{}".format(code, quantity, ask,
-                                                                                        order_result)
-        send_message(message, RSI_STRATEGY_MESSAGE_TOKEN)'''
+        # '''message = "[{}]sell order is done! quantity:{}, ask:{}, order_result:{}".format(code, quantity, ask,
+        #                                                                                 order_result)
+        # send_message(message, RSI_STRATEGY_MESSAGE_TOKEN)'''
 
     def check_buy_signal_and_order(self, code):
         """매수 대상인지 확인하고 주문을 접수하는 함수"""
