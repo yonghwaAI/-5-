@@ -4,16 +4,19 @@ from util.time_helper import *
 import math
 import traceback
 import sys
+<<<<<<< HEAD
 
 # from util.make_up_universe import *
 # from util.notifier import *
+=======
+>>>>>>> f9574ef5611e4055de700a76f9f3b405ac8a3379
 
 class RSIStrategy(QThread):
     def __init__(self):
         QThread.__init__(self)
         self.strategy_name = "RSIStrategy"
         self.kiwoom = Kiwoom()
-
+        
         # 유니버스 정보를 담을 딕셔너리
         self.universe = {'069500':'kodex_200', '114800':'kodex_inverse'}
 
@@ -21,6 +24,18 @@ class RSIStrategy(QThread):
             'code': self.universe.keys(),
             'code_name': self.universe.values()
         })
+
+        # 유니버스 정보를 담을 딕셔너리
+<<<<<<< HEAD
+        self.universe = {'069500':'kodex_200', '114800':'kodex_inverse'}
+
+        self.universe_df = pd.DataFrame({
+            'code': self.universe.keys(),
+            'code_name': self.universe.values()
+        })
+=======
+        '''self.universe = {}'''
+>>>>>>> f9574ef5611e4055de700a76f9f3b405ac8a3379
 
         # 계좌 예수금
         self.deposit = 0
@@ -34,7 +49,11 @@ class RSIStrategy(QThread):
         """전략 초기화 기능을 수행하는 함수"""
         try:
             # 유니버스 조회, 없으면 생성
+<<<<<<< HEAD
             # self.check_and_get_universe()
+=======
+            '''self.check_and_get_universe()'''
+>>>>>>> f9574ef5611e4055de700a76f9f3b405ac8a3379
 
             # 가격 정보를 조회, 필요하면 생성
             self.check_and_get_price_data()
@@ -55,6 +74,7 @@ class RSIStrategy(QThread):
 
         except Exception as e:
             print(traceback.format_exc())
+<<<<<<< HEAD
             # LINE 메시지를 보내는 부분 → 삭제
 
     # def check_and_get_universe(self):
@@ -65,6 +85,19 @@ class RSIStrategy(QThread):
     #         universe = {}
     #         # 오늘 날짜를 20210101 형태로 지정
     #         now = datetime.now().strftime("%Y%m%d")
+=======
+            # LINE 메시지를 보내는 부분
+        '''   send_message(traceback.format_exc(), RSI_STRATEGY_MESSAGE_TOKEN)'''
+
+    '''def check_and_get_universe(self):
+        """유니버스가 존재하는지 확인하고 없으면 생성하는 함수"""
+        if not check_table_exist(self.strategy_name, 'universe'):
+            universe_list = get_universe()
+            print(universe_list)
+            universe = {}
+            # 오늘 날짜를 20210101 형태로 지정
+            now = datetime.now().strftime("%Y%m%d")
+>>>>>>> f9574ef5611e4055de700a76f9f3b405ac8a3379
 
     #         # KOSPI(0)에 상장된 모든 종목 코드를 가져와 kospi_code_list에 저장
     #         kospi_code_list = self.kiwoom.get_code_list_by_market("0")
@@ -90,6 +123,7 @@ class RSIStrategy(QThread):
     #         # universe라는 테이블명으로 Dataframe을 DB에 저장함
     #         insert_df_to_db(self.strategy_name, 'universe', universe_df)
 
+<<<<<<< HEAD
     #     sql = "select * from universe"
     #     cur = execute_sql(self.strategy_name, sql)
     #     universe_list = cur.fetchall()
@@ -99,6 +133,17 @@ class RSIStrategy(QThread):
     #             'code_name': code_name
     #         }
     #     print(self.universe)
+=======
+        sql = "select * from universe"
+        cur = execute_sql(self.strategy_name, sql)
+        universe_list = cur.fetchall()
+        for item in universe_list:
+            idx, code, code_name, created_at = item
+            self.universe[code] = {
+                'code_name': code_name
+            }
+        print(self.universe)'''
+>>>>>>> f9574ef5611e4055de700a76f9f3b405ac8a3379
 
     def check_and_get_price_data(self):
         """일봉 데이터가 존재하는지 확인하고 없다면 생성하는 함수"""
@@ -150,7 +195,11 @@ class RSIStrategy(QThread):
             try:
                 # (0)장중인지 확인
                 if not check_transaction_open():
+<<<<<<< HEAD
                     print("장시간이 아닙니다.")
+=======
+                    print("장시간이 아니므로 종료합니다.")
+>>>>>>> f9574ef5611e4055de700a76f9f3b405ac8a3379
                     sys.exit()
 
                 for idx, code in enumerate(self.universe.keys()):
@@ -180,7 +229,12 @@ class RSIStrategy(QThread):
 
             except Exception as e:
                 print(traceback.format_exc())
+<<<<<<< HEAD
                 # LINE 메시지를 보내는 부분 → 삭제
+=======
+                # LINE 메시지를 보내는 부분
+            '''  send_message(traceback.format_exc(), RSI_STRATEGY_MESSAGE_TOKEN)'''
+>>>>>>> f9574ef5611e4055de700a76f9f3b405ac8a3379
 
     def set_universe_real_time(self):
         """유니버스 실시간 체결정보 수신 등록하는 함수"""
@@ -257,8 +311,15 @@ class RSIStrategy(QThread):
 
         order_result = self.kiwoom.send_order('send_sell_order', '1001', 2, code, quantity, ask, '00')
 
+<<<<<<< HEAD
         # LINE 메시지를 보내는 부분 → 삭제
         
+=======
+        # LINE 메시지를 보내는 부분
+        '''message = "[{}]sell order is done! quantity:{}, ask:{}, order_result:{}".format(code, quantity, ask,
+                                                                                        order_result)
+        send_message(message, RSI_STRATEGY_MESSAGE_TOKEN)'''
+>>>>>>> f9574ef5611e4055de700a76f9f3b405ac8a3379
 
     def check_buy_signal_and_order(self, code):
         """매수 대상인지 확인하고 주문을 접수하는 함수"""
@@ -351,12 +412,20 @@ class RSIStrategy(QThread):
             # _on_chejan_slot가 늦게 동작할 수도 있기 때문에 미리 약간의 정보를 넣어둠
             self.kiwoom.order[code] = {'주문구분': '매수', '미체결수량': quantity}
 
+<<<<<<< HEAD
             # LINE 메시지를 보내는 부분 -> 삭제
             
+=======
+            # LINE 메시지를 보내는 부분
+        ''' message = "[{}]buy order is done! quantity:{}, bid:{}, order_result:{}, deposit:{}, get_balance_count:{}, get_buy_order_count:{}, balance_len:{}".format(
+                code, quantity, bid, order_result, self.deposit, self.get_balance_count(), self.get_buy_order_count(),
+                len(self.kiwoom.balance))
+            send_message(message, RSI_STRATEGY_MESSAGE_TOKEN)
+>>>>>>> f9574ef5611e4055de700a76f9f3b405ac8a3379
 
         # 매수신호가 없다면 종료
         else:
-            return
+            return'''
 
     def get_balance_count(self):
         """매도 주문이 접수되지 않은 보유 종목 수를 계산하는 함수"""
