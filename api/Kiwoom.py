@@ -71,9 +71,11 @@ class Kiwoom(QAxWidget):
         return code_name
 
     def get_price_data(self, code):
+        # 분봉 데이터 조회
         self.dynamicCall("SetInputValue(QString, QString)", "종목코드", code)
+        self.dynamicCall("SetInputValue(QString, QString)", "틱범위", 3)
         self.dynamicCall("SetInputValue(QString, QString)", "수정주가구분", "1")
-        self.dynamicCall("CommRqData(QString, QString, int, QString)", "opt10081_req", "opt10081", 0, "0001")
+        self.dynamicCall("CommRqData(QString, QString, int, QString)", "opt10080_req", "opt10080", 0, "0101")
 
         self.tr_event_loop.exec_()
 
@@ -81,12 +83,13 @@ class Kiwoom(QAxWidget):
 
         while self.has_next_tr_data:
             self.dynamicCall("SetInputValue(QString, QString)", "종목코드", code)
+            self.dynamicCall("SetInputValue(QString, QString)", "틱범위", 3)
             self.dynamicCall("SetInputValue(QString, QString)", "수정주가구분", "1")
-            self.dynamicCall("CommRqData(QString, QString, int, QString)", "opt10081_req", "opt10081", 2, "0001")
+            self.dynamicCall("CommRqData(QString, QString, int, QString)", "opt10080_req", "opt10080", 2, "0101")
             self.tr_event_loop.exec_()
 
             for key, val in self.tr_data.items():
-                ohlcv[key] += val
+                 ohlcv[key] += val
 
         df = pd.DataFrame(ohlcv, columns=['open', 'high', 'low', 'close', 'volume'], index=ohlcv['date'])
 
@@ -102,7 +105,7 @@ class Kiwoom(QAxWidget):
         else:
             self.has_next_tr_data = False
 
-        if rqname == "opt10081_req":
+        if rqname == "opt10080_req":
             ohlcv = {'date': [], 'open': [], 'high': [], 'low': [], 'close': [], 'volume': []}
 
             for i in range(tr_data_cnt):
