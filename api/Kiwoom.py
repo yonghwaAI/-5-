@@ -89,7 +89,7 @@ class Kiwoom(QAxWidget):
             self.tr_event_loop.exec_()
 
             for key, val in self.tr_data.items():
-                 ohlcv[key] += val
+                ohlcv[key] += val
 
 
         # 일봉데이터 조회

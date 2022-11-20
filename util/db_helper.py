@@ -1,6 +1,5 @@
 import sqlite3
 
-
 def check_table_exist(db_name, table_name):
     with sqlite3.connect('{}.db'.format(db_name)) as con:
         cur = con.cursor()

@@ -7,3 +7,5 @@ rsi_strategy = RSIStrategy()
 rsi_strategy.start()
 
 app.exec_()
+
+
