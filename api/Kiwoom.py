@@ -111,7 +111,8 @@ class Kiwoom(QAxWidget):
             #     ohlcv[key] += val
 
         df = pd.DataFrame(ohlcv, columns=['open', 'high', 'low', 'close', 'volume'], index=ohlcv['date'])
-
+        # print(df.index[0])
+        # 인덱스기준으로 내림차순한 df
         return df[::-1]
 
     def _on_receive_tr_data(self, screen_no, rqname, trcode, record_name, next, unused1, unused2, unused3, unused4):
@@ -128,7 +129,7 @@ class Kiwoom(QAxWidget):
             ohlcv = {'date': [], 'open': [], 'high': [], 'low': [], 'close': [], 'volume': []}
 
             for i in range(tr_data_cnt):
-                date = self.dynamicCall("GetCommData(QString, QString, int, QString", trcode, rqname, i, "일자")
+                date = self.dynamicCall("GetCommData(QString, QString, int, QString", trcode, rqname, i, "체결시간")
                 open = self.dynamicCall("GetCommData(QString, QString, int, QString", trcode, rqname, i, "시가")
                 high = self.dynamicCall("GetCommData(QString, QString, int, QString", trcode, rqname, i, "고가")
                 low = self.dynamicCall("GetCommData(QString, QString, int, QString", trcode, rqname, i, "저가")

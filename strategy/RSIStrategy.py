@@ -6,6 +6,7 @@ from util.notifier import *
 import math
 import traceback
 import sys
+import numpy as np
 
 class RSIStrategy(QThread):
     def __init__(self):
@@ -13,13 +14,14 @@ class RSIStrategy(QThread):
         self.strategy_name = "RSIStrategy"
         self.kiwoom = Kiwoom()
         
+        '''
         # 유니버스 정보를 담을 딕셔너리
         self.universe = {'069500':'kodex_200', '114800':'kodex_inverse'}
 
         self.universe_df = pd.DataFrame({
             'code': self.universe.keys(),
             'code_name': self.universe.values()
-        })
+        })'''
 
         # 계좌 예수금
         self.deposit = 0
@@ -56,6 +58,34 @@ class RSIStrategy(QThread):
             print(traceback.format_exc())
             # LINE 메시지를 보내는 부분
             ''' send_message(traceback.format_exc(), RSI_STRATEGY_MESSAGE_TOKEN)'''
+    
+     # 실험
+    def check_and_get_universe(self):
+        # 오늘 날짜를 20210101 형태로 지정
+        now = datetime.now().strftime("%Y%m%d")
+
+        self.universe = {'069500':'kodex_200', '114800':'kodex_inverse'}
+
+        universe_list= [['069500', 'kodex_200'], ['114800','kodex_inverse']]
+
+        self.universe_df = pd.DataFrame({
+                'code': self.universe.keys(),
+                'code_name': self.universe.values(),
+                'created_at': [now] * len(self.universe.keys())
+        })
+
+        # universe라는 테이블명으로 Dataframe을 DB에 저장함
+        insert_df_to_db(self.strategy_name, 'universe', self.universe_df)
+
+        sql = "select * from universe"
+        cur = execute_sql(self.strategy_name, sql)
+        universe_list = cur.fetchall()
+        for item in universe_list:
+            idx, code, code_name, created_at = item
+            self.universe[code] = {
+                'code_name': code_name
+            }
+        print(self.universe)
 
     '''def check_and_get_universe(self):
         """유니버스가 존재하는지 확인하고 없으면 생성하는 함수"""
