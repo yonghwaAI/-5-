@@ -6,8 +6,8 @@ def check_table_exist(db_name, table_name):
         sql = "SELECT name FROM sqlite_master WHERE type='table' and name=:table_name"
         cur.execute(sql, {"table_name": table_name})
 
-        if len(cur.fetchall()) > 0:
-            return True
+        if len(cur.fetchall()) > 0:        # cur.fetchall() 조회한 데이터 개수 
+            return True                    # 0보다 크면 DB에 해당 테이블이 있다는 의미
         else:
             return False
 
