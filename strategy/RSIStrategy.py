@@ -280,6 +280,8 @@ class RSIStrategy(QThread):
 
     def order_sell(self, code):
         """매도 주문 접수 함수"""
+        # 실험
+        print('매도 주문 접수 함수 시작')
         # 보유 수량 확인(전량 매도 방식으로 보유한 수량을 모두 매도함)
         quantity = self.kiwoom.balance[code]['보유수량']
 
