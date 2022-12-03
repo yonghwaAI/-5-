@@ -58,7 +58,7 @@ class RSIStrategy(QThread):
             # LINE 메시지를 보내는 부분
         '''   send_message(traceback.format_exc(), RSI_STRATEGY_MESSAGE_TOKEN)'''
 
-    '''def check_and_get_universe(self):
+    def check_and_get_universe(self):
         """유니버스가 존재하는지 확인하고 없으면 생성하는 함수"""
         if not check_table_exist(self.strategy_name, 'universe'):
             universe_list = get_universe()
@@ -99,7 +99,7 @@ class RSIStrategy(QThread):
             self.universe[code] = {
                 'code_name': code_name
             }
-        print(self.universe)'''
+        print(self.universe)
 
     def check_and_get_price_data(self):
         """일봉 데이터가 존재하는지 확인하고 없다면 생성하는 함수"""
@@ -143,7 +143,7 @@ class RSIStrategy(QThread):
                     price_df = pd.DataFrame.from_records(data=cur.fetchall(), columns=cols)
                     price_df = price_df.set_index('index')
                     # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
-                    self.universe[code]['price_df'] = price_df
+                    ''' self.universe[code]['price_df'] = price_df'''
 
     def run(self):
         """실질적 수행 역할을 하는 함수"""
