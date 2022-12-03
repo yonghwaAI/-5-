@@ -9,3 +9,4 @@ rsi_strategy.start()
 app.exec_()
 
 
+
