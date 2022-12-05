@@ -1,6 +1,7 @@
 from strategy.RSIStrategy import *
 import talib
 import pandas as pd
+import numpy as np
 
 
 
@@ -64,5 +65,5 @@ class tech_model():
       
       
     def make_target(self, df: pd.DataFrame,window_size=30):
-        df['target'] = df.close.rolling(window_size).mean().shift(-window_size)/df.cose
+        df['target'] = df.close.rolling(window_size).mean().shift(-window_size)/df.close
     
