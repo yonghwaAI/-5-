@@ -3,27 +3,29 @@ from util.make_up_universe import *
 from util.db_helper import *
 from util.time_helper import *
 from util.notifier import *
+from model.ml_model import *
 import math
 import traceback
 import sys
 import numpy as np
+import pandas as pd
 import talib
-from datetime import datetime
+import pickle
 
 class RSIStrategy(QThread):
     def __init__(self):
         QThread.__init__(self)
         self.strategy_name = "RSIStrategy"
         self.kiwoom = Kiwoom()
-
-
+        self.tech = Tech_model()
+        
+        '''
         # 유니버스 정보를 담을 딕셔너리
         self.universe = {'069500':'kodex_200', '114800':'kodex_inverse'}
-
         self.universe_df = pd.DataFrame({
             'code': self.universe.keys(),
             'code_name': self.universe.values()
-        })
+        })'''
 
         # 계좌 예수금
         self.deposit = 0
@@ -41,9 +43,6 @@ class RSIStrategy(QThread):
 
             # 가격 정보를 조회, 필요하면 생성
             self.check_and_get_price_data()
-            
-            # 기술적 지표 생성
-            self.main()
 
             # Kiwoom > 주문정보 확인
             self.kiwoom.get_order()
@@ -54,9 +53,11 @@ class RSIStrategy(QThread):
             # Kiwoom > 예수금 확인
             self.deposit = self.kiwoom.get_deposit()
 
+            # 기술적 지표 확인
+            #self.tech_model.build_up_input_features()
+
             # 유니버스 실시간 체결정보 등록
             self.set_universe_real_time()
-
 
             self.is_init_success = True
 
@@ -68,7 +69,7 @@ class RSIStrategy(QThread):
      # 실험
     def check_and_get_universe(self):
         # 오늘 날짜를 20210101 형태로 지정
-        now = datetime.now().strftime("%Y%m%d")
+        now = datetime.now().strftime("%Y%m%d%H%M")
 
         self.universe = {'069500':'kodex_200', '114800':'kodex_inverse'}
 
@@ -101,31 +102,24 @@ class RSIStrategy(QThread):
             universe = {}
             # 오늘 날짜를 20210101 형태로 지정
             now = datetime.now().strftime("%Y%m%d")
-
             # KOSPI(0)에 상장된 모든 종목 코드를 가져와 kospi_code_list에 저장
             kospi_code_list = self.kiwoom.get_code_list_by_market("0")
-
             # KOSDAQ(10)에 상장된 모든 종목 코드를 가져와 kosdaq_code_list에 저장
             kosdaq_code_list = self.kiwoom.get_code_list_by_market("10")
-
             for code in kospi_code_list + kosdaq_code_list:
                 # 모든 종목 코드를 바탕으로 반복문 수행
                 code_name = self.kiwoom.get_master_code_name(code)
-
                 # 얻어온 종목명이 유니버스에 포함되어 있다면 딕셔너리에 추가
                 if code_name in universe_list:
                     universe[code] = code_name
-
             # 코드, 종목명, 생성일자자를 열로 가지는 DaaFrame 생성
             universe_df = pd.DataFrame({
                 'code': universe.keys(),
                 'code_name': universe.values(),
                 'created_at': [now] * len(universe.keys())
             })
-
             # universe라는 테이블명으로 Dataframe을 DB에 저장함
             insert_df_to_db(self.strategy_name, 'universe', universe_df)
-
         sql = "select * from universe"
         cur = execute_sql(self.strategy_name, sql)
         universe_list = cur.fetchall()
@@ -137,58 +131,78 @@ class RSIStrategy(QThread):
         print(self.universe)'''
 
     def check_and_get_price_data(self):
-        """일봉 데이터가 존재하는지 확인하고 없다면 생성하는 함수"""
-        for idx, code in enumerate(self.universe.keys()):
-            print("({}/{}) {}".format(idx + 1, len(self.universe), code))
+            """분봉 데이터가 존재하는지 확인하고 없다면 생성하는 함수"""
+            for idx, code in enumerate(self.universe.keys()):
+                print("({}/{}) {}".format(idx + 1, len(self.universe), code))
 
-            # (1)케이스: 분봉 데이터가 아예 없는지 확인(장 종료 이후)
-            if check_transaction_closed() and not check_table_exist(self.strategy_name, code):
-                print('(1)케이스: 일봉 데이터가 아예 없는지 확인(장 종료 이후)')
-                # API를 이용해 조회한 가격 데이터 price_df에 저장
-                price_df = self.kiwoom.get_price_data(code)
-                # 코드를 테이블 이름으로 해서 데이터베이스에 저장
-                insert_df_to_db(self.strategy_name, code, price_df)
-            else:
-                # (2), (3), (4) 케이스: 일봉 데이터가 있는 경우
-                # (2)케이스: 장이 종료된 경우 API를 이용해 얻어온 데이터를 저장
-                if check_transaction_closed():
-                    print('(2)케이스: 장이 종료된 경우 API를 이용해 얻어온 데이터를 저장')
-                    # 저장된 데이터의 가장 최근 일자를 조회
-                    sql = "select max(`{}`) from `{}`".format('index', code)
-
-                    cur = execute_sql(self.strategy_name, sql)
-
-                    # 일봉 데이터를 저장한 가장 최근 일자를 조회
-                    last_date = cur.fetchone()
-
-                    # 오늘 날짜를 20210101 형태로 지정
-                    now = datetime.now().strftime("%Y%m%d")
-
-                    # 최근 저장 일자가 오늘이 아닌지 확인
-                    if last_date[0] != now:
-                        price_df = self.kiwoom.get_price_data(code)
-                        # 코드를 테이블 이름으로 해서 데이터베이스에 저장
-                        insert_df_to_db(self.strategy_name, code, price_df)
-                        self.universe[code]['price_df'] = price_df
-
-                # (3), (4) 케이스: 장 시작 전이거나 장 중인 경우 데이터베이스에 저장된 데이터 조회
-                else:
-                    print('(3), (4) 케이스: 장 시작 전이거나 장 중인 경우 데이터베이스에 저장된 데이터 조회')
-                    sql = "select * from `{}`".format(code)
-                    cur = execute_sql(self.strategy_name, sql)
-                    cols = [column[0] for column in cur.description]
-
-                    # 데이터베이스에서 조회한 데이터를 DataFrame으로 변환해서 저장
-                    price_df = pd.DataFrame.from_records(data=cur.fetchall(), columns=cols)
-                    price_df = price_df.set_index('index')
+                # (1)케이스: 분봉 데이터가 아예 없는지 확인(장 종료 이후)
+                if check_transaction_closed() and not check_table_exist(self.strategy_name, code):
+                    print("분봉 데이터가 없음")
+                    # API를 이용해 조회한 가격 데이터 price_df에 저장
+                    price_df = self.kiwoom.get_price_data(code)
+                    # 코드를 테이블 이름으로 해서 데이터베이스에 저장
+                    insert_df_to_db(self.strategy_name, code, price_df)
                     # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
                     self.universe[code]['price_df'] = price_df
+                else:
+                    # (2), (3), (4) 케이스: 일봉 데이터가 있는 경우
+                    # (2)케이스: 장이 종료된 경우 API를 이용해 얻어온 데이터를 저장
+                    if check_transaction_closed():
+                        print("장이 종료된 경우")
+                        # 저장된 데이터의 가장 최근 일자를 조회
+                        sql = "select max(`{}`) from `{}`".format('index', code)
 
-#------------------------------------------------------------------------------------    
-    # baseline_model
+                        cur = execute_sql(self.strategy_name, sql)
+
+                        # 분봉 데이터를 저장한 가장 최근 일자를 조회
+                        last_date = cur.fetchone()
+
+                        # 오늘 날짜를 20210101 형태로 지정
+                        now = datetime.now().strftime("%Y%m%d%H%M")
+
+                        # -------------------------------------------
+                        # 데이터베이스에 저장된 데이터 조회
+                        sql = "select * from `{}`".format(code)
+                        cur = execute_sql(self.strategy_name, sql)
+                        cols = [column[0] for column in cur.description]
+                        # 데이터베이스에서 조회한 데이터를 DataFrame으로 변환해서 저장
+                        price_df = pd.DataFrame.from_records(data=cur.fetchall(), columns=cols)
+                        price_df = price_df.set_index('index')
+                        # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
+                        self.universe[code]['price_df'] = price_df
+                        # -------------------------------------------
+
+
+                        # 최근 저장 일자가 오늘이 아닌지 확인
+                        if last_date[0] != now:
+                            print("최근 저장 일자가 오늘이 아님")
+                            price_df = self.kiwoom.get_price_data(code)
+                            # 코드를 테이블 이름으로 해서 데이터베이스에 저장
+                            insert_df_to_db(self.strategy_name, code, price_df)
+                            # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
+                            self.universe[code]['price_df'] = price_df
+
+                    # (3), (4) 케이스: 장 시작 전이거나 장 중인 경우 데이터베이스에 저장된 데이터 조회
+                    else:
+                        print("장 시작 전이거나 장 중인 경우")
+                        sql = "select * from `{}`".format(code)
+                        cur = execute_sql(self.strategy_name, sql)
+                        cols = [column[0] for column in cur.description]
+
+                        # 데이터베이스에서 조회한 데이터를 DataFrame으로 변환해서 저장
+                        price_df = pd.DataFrame.from_records(data=cur.fetchall(), columns=cols)
+                        price_df = price_df.set_index('index')
+                        # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
+                        self.universe[code]['price_df'] = price_df
+    '''
+    def build_up_input_features(self,df: pd.DataFrame):
+        self.make_basic_features(df)
+        self.make_window_features(df)
+        self.make_binary_indicators(df)
+
     def make_basic_features(self, df: pd.DataFrame):
         """
-        기술적 지표
+        df가 변형됨
         """
         ma = talib.MA(df['close'], timeperiod=30)
         macd, macdsignal, macdhist = talib.MACD(df['close'])
@@ -202,66 +216,60 @@ class RSIStrategy(QThread):
         df['rsi'] = rsi
         df['ad'] = ad
 
-        # 9시 ~15시30분사이에 오프셋이 차지하는 위치를 1로 표현_ 오프셋이 뭐였지..?
         df.index = pd.to_datetime(df.index)
         df['offset_intra_day'] = ((df.index - df.index.floor('D') - pd.Timedelta('9h')).total_seconds()/(60*60*6.5)).values
-        #print(df.tail(10))
-
-
+        
     def make_window_features(self, df: pd.DataFrame, cols=['ma', 'macd', 'macdsignal', 'macdhist', 'rsi', 'ad'], window_size=10):
         """
         df가 변형됨: 과거 윈도우 동안의 평균값대비 현재 값의 차이를 계산
         """
         for col in cols:
-          prev_summary = df[col].rolling(window=window_size).mean().shift(1)
-          df[f'{col}_w'] = (df[col] - prev_summary)
-
+            prev_summary = df[col].rolling(window=window_size).mean().shift(1)
+            df[f'{col}_w'] = (df[col] - prev_summary)
 
     def make_binary_dt_features(self, df: pd.DataFrame):
         """
-        장 종료 / 장 시작 분에 해당하는지
+        df가 변형됨
         """
         ss = df.reset_index()
         ss['dt'] = ss['index']
-        # print(ss.tail())
         df['ts_end'] = ss.dt.shift(-1).apply(lambda x: x.hour == 9 and x.minute == 0).values
         df['ts_start'] = ss.dt.apply(lambda x: x.hour == 9 and x.minute == 0).values
 
-
     def make_binary_close_indicators(self, df: pd.DataFrame):
         """
-        어제 종가 보다 오른 상태로 현재가가 형성되어 있는지
+        df가 변형됨
         """
         daily_prev_close = df.groupby(df.index.strftime('%Y-%m-%d')).close.last().shift(1)
         xx = pd.Series(df.index.strftime('%Y-%m-%d').map(daily_prev_close).values, index=df.index)
         df['is_higher'] = xx < df.close
         df.loc[xx.isna(), 'is_higher']=np.nan
 
-##-------------------------------------
-
     def make_binary_indicators(self, df: pd.DataFrame):
         self.make_binary_dt_features(df)
         self.make_binary_close_indicators(df)
 
+    ''' 
 
-    def make_target(self, df: pd.DataFrame, window_size=10):
-        """
-        close의 내일 ~ window_size 까지의 가격 변화율을 target으로 함
-        """
-        df['target'] = df.close.rolling(window=window_size).mean().shift(-window_size) /df.close
-
-    def main(self):
-        universe_item = self.universe['069500']
-        df = universe_item['price_df'].copy()
-        self.make_basic_features(df)
-        self.make_window_features(df)
-        self.make_binary_indicators(df)
-        self.make_target(df, window_size=60)
-        print(df.tail(30))
-
-#------------------------------------------------------------------------------------
     def run(self):
         """실질적 수행 역할을 하는 함수"""
+        # 기술적 기표 가져오기
+        print(self.universe['069500'])
+        print(self.universe['069500']['price_df'])
+
+        universe_item_069500 = self.universe['069500']
+        df_069500 = universe_item_069500['price_df'].copy()
+        universe_item_114800 = self.universe['114800']
+        df_114800 = universe_item_114800['price_df'].copy()
+
+        self.tech.build_up_input_features(df_069500)
+        self.tech.build_up_input_features(df_114800)
+        print('df_069500\n')
+        print(df_069500.iloc[[0,10,20,30,40,50,60,70,80,90,100,110,120,130,140],5:])
+        print('------------------------------------------------------------------------------------------------- \n')
+        print('df_114800\n')
+        print(df_114800.iloc[[0,10,20,30,40,50,60,70,80,90,100,110,120,130,140],5:])
+
         while self.is_init_success:
             try:
                 # (0)장중인지 확인
@@ -274,7 +282,6 @@ class RSIStrategy(QThread):
                     time.sleep(0.5)
 
                     # (1)접수한 주문이 있는지 확인
-                    print('접수 주문 확인')
                     if code in self.kiwoom.order.keys():
                         # (2)주문이 있음
                         print('접수 주문', self.kiwoom.order[code])
@@ -299,6 +306,7 @@ class RSIStrategy(QThread):
                 print(traceback.format_exc())
                 # LINE 메시지를 보내는 부분
             '''    send_message(traceback.format_exc(), RSI_STRATEGY_MESSAGE_TOKEN) '''
+
 
     def set_universe_real_time(self):
         """유니버스 실시간 체결정보 수신 등록하는 함수"""
@@ -340,7 +348,7 @@ class RSIStrategy(QThread):
         df = universe_item['price_df'].copy()
 
         # 과거 가격 데이터에 금일 날짜로 데이터 추가
-        df.loc[datetime.now().strftime('%Y%m%d')] = today_price_data
+        df.loc[datetime.now().strftime('%Y%m%d%H%M')] = today_price_data
 
         # RSI(N) 계산
         period = 2  # 기준일 설정
@@ -367,8 +375,6 @@ class RSIStrategy(QThread):
 
     def order_sell(self, code):
         """매도 주문 접수 함수"""
-        # 실험
-        print('매도 주문 접수 함수 시작')
         # 보유 수량 확인(전량 매도 방식으로 보유한 수량을 모두 매도함)
         quantity = self.kiwoom.balance[code]['보유수량']
 
@@ -409,7 +415,7 @@ class RSIStrategy(QThread):
         df = universe_item['price_df'].copy()
 
         # 과거 가격 데이터에 금일 날짜로 데이터 추가
-        df.loc[datetime.now().strftime('%Y%m%d')] = today_price_data
+        df.loc[datetime.now().strftime('%Y%m%d%H%M')] = today_price_data
 
         # RSI(N) 계산
         period = 2  # 기준일 설정
@@ -432,7 +438,7 @@ class RSIStrategy(QThread):
         ma60 = df[-1:]['ma60'].values[0]
 
         # 2 거래일 전 날짜(index)를 구함
-        idx = df.index.get_loc(datetime.now().strftime('%Y%m%d')) - 2
+        idx = df.index.get_loc(datetime.now().strftime('%Y%m%d%H%M')) - 2
 
         # 위 index로부터 2 거래일 전 종가를 얻어옴
         close_2days_ago = df.iloc[idx]['close']
@@ -474,14 +480,13 @@ class RSIStrategy(QThread):
             self.kiwoom.order[code] = {'주문구분': '매수', '미체결수량': quantity}
 
             # LINE 메시지를 보내는 부분
-            '''  message = "[{}]buy order is done! quantity:{}, bid:{}, order_result:{}, deposit:{}, get_balance_count:{}, get_buy_order_count:{}, balance_len:{}".format(
+        '''  message = "[{}]buy order is done! quantity:{}, bid:{}, order_result:{}, deposit:{}, get_balance_count:{}, get_buy_order_count:{}, balance_len:{}".format(
                 code, quantity, bid, order_result, self.deposit, self.get_balance_count(), self.get_buy_order_count(),
                 len(self.kiwoom.balance))
-            send_message(message, RSI_STRATEGY_MESSAGE_TOKEN)'''
-
+            send_message(message, RSI_STRATEGY_MESSAGE_TOKEN)
         # 매수신호가 없다면 종료
         else:
-            return
+            return'''
 
     def get_balance_count(self):
         """매도 주문이 접수되지 않은 보유 종목 수를 계산하는 함수"""
