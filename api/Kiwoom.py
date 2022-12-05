@@ -208,6 +208,7 @@ class Kiwoom(QAxWidget):
                 }
 
             self.tr_data = self.order
+        
 
         elif rqname == "opw00018_req":
             for i in range(tr_data_cnt):

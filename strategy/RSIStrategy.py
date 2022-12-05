@@ -3,6 +3,7 @@ from util.make_up_universe import *
 from util.db_helper import *
 from util.time_helper import *
 from util.notifier import *
+from model.ml_model import *
 import math
 import traceback
 import sys
@@ -16,11 +17,11 @@ class RSIStrategy(QThread):
         QThread.__init__(self)
         self.strategy_name = "RSIStrategy"
         self.kiwoom = Kiwoom()
+        self.tech = Tech_model()
         
         '''
         # 유니버스 정보를 담을 딕셔너리
         self.universe = {'069500':'kodex_200', '114800':'kodex_inverse'}
-
         self.universe_df = pd.DataFrame({
             'code': self.universe.keys(),
             'code_name': self.universe.values()
@@ -51,6 +52,9 @@ class RSIStrategy(QThread):
 
             # Kiwoom > 예수금 확인
             self.deposit = self.kiwoom.get_deposit()
+
+            # 기술적 지표 확인
+            #self.tech_model.build_up_input_features()
 
             # 유니버스 실시간 체결정보 등록
             self.set_universe_real_time()
@@ -98,31 +102,24 @@ class RSIStrategy(QThread):
             universe = {}
             # 오늘 날짜를 20210101 형태로 지정
             now = datetime.now().strftime("%Y%m%d")
-
             # KOSPI(0)에 상장된 모든 종목 코드를 가져와 kospi_code_list에 저장
             kospi_code_list = self.kiwoom.get_code_list_by_market("0")
-
             # KOSDAQ(10)에 상장된 모든 종목 코드를 가져와 kosdaq_code_list에 저장
             kosdaq_code_list = self.kiwoom.get_code_list_by_market("10")
-
             for code in kospi_code_list + kosdaq_code_list:
                 # 모든 종목 코드를 바탕으로 반복문 수행
                 code_name = self.kiwoom.get_master_code_name(code)
-
                 # 얻어온 종목명이 유니버스에 포함되어 있다면 딕셔너리에 추가
                 if code_name in universe_list:
                     universe[code] = code_name
-
             # 코드, 종목명, 생성일자자를 열로 가지는 DaaFrame 생성
             universe_df = pd.DataFrame({
                 'code': universe.keys(),
                 'code_name': universe.values(),
                 'created_at': [now] * len(universe.keys())
             })
-
             # universe라는 테이블명으로 Dataframe을 DB에 저장함
             insert_df_to_db(self.strategy_name, 'universe', universe_df)
-
         sql = "select * from universe"
         cur = execute_sql(self.strategy_name, sql)
         universe_list = cur.fetchall()
@@ -197,7 +194,7 @@ class RSIStrategy(QThread):
                         price_df = price_df.set_index('index')
                         # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
                         self.universe[code]['price_df'] = price_df
-
+    '''
     def build_up_input_features(self,df: pd.DataFrame):
         self.make_basic_features(df)
         self.make_window_features(df)
@@ -251,9 +248,28 @@ class RSIStrategy(QThread):
     def make_binary_indicators(self, df: pd.DataFrame):
         self.make_binary_dt_features(df)
         self.make_binary_close_indicators(df)
-        
+
+    ''' 
+
     def run(self):
         """실질적 수행 역할을 하는 함수"""
+        # 기술적 기표 가져오기
+        print(self.universe['069500'])
+        print(self.universe['069500']['price_df'])
+
+        universe_item_069500 = self.universe['069500']
+        df_069500 = universe_item_069500['price_df'].copy()
+        universe_item_114800 = self.universe['114800']
+        df_114800 = universe_item_114800['price_df'].copy()
+
+        self.tech.build_up_input_features(df_069500)
+        self.tech.build_up_input_features(df_114800)
+        print('df_069500\n')
+        print(df_069500.iloc[[0,10,20,30,40,50,60,70,80,90,100,110,120,130,140],5:])
+        print('------------------------------------------------------------------------------------------------- \n')
+        print('df_114800\n')
+        print(df_114800.iloc[[0,10,20,30,40,50,60,70,80,90,100,110,120,130,140],5:])
+
         while self.is_init_success:
             try:
                 # (0)장중인지 확인
@@ -291,18 +307,6 @@ class RSIStrategy(QThread):
                 # LINE 메시지를 보내는 부분
             '''    send_message(traceback.format_exc(), RSI_STRATEGY_MESSAGE_TOKEN) '''
 
-        print(self.universe['069500'])
-        print(self.universe['069500']['price_df'])
-
-        universe_item_069500 = self.universe['069500']
-        df_069500 = universe_item_069500['price_df'].copy()
-        universe_item_114800 = self.universe['114800']
-        df_114800 = universe_item_114800['price_df'].copy()
-
-        self.build_up_input_features(df_069500)
-        self.build_up_input_features(df_114800)
-        print(df_069500.iloc[[0,10,20,30,40,50,60,70,80,90,100,110,120,130,140],7:])
-        print(df_114800.iloc[[0,10,20,30,40,50,60,70,80,90,100,110,120,130,140],7:])
 
     def set_universe_real_time(self):
         """유니버스 실시간 체결정보 수신 등록하는 함수"""
@@ -480,7 +484,6 @@ class RSIStrategy(QThread):
                 code, quantity, bid, order_result, self.deposit, self.get_balance_count(), self.get_buy_order_count(),
                 len(self.kiwoom.balance))
             send_message(message, RSI_STRATEGY_MESSAGE_TOKEN)
-
         # 매수신호가 없다면 종료
         else:
             return'''
