@@ -57,9 +57,16 @@ class Kiwoom(QAxWidget):
 
     def get_account_number(self, tag="ACCNO"):
         account_list = self.dynamicCall("GetLoginInfo(QString)", tag)  # tag로 전달한 요청에 대한 응답을 받아옴
+        account_count = len(account_list.split(';')) - 1
         account_number = account_list.split(';')[0]
-        print(account_number, account_list)
+        print("ACCOUNT LIST:", account_list)
+        print("ACCOUNT COUNT:", account_count)
         return account_number
+
+    def get_user_id(self, tag="USER_ID"):
+        user_id = self.dynamicCall("GetLoginInfo(QString)", tag)  # tag로 전달한 요청에 대한 응답을 받아옴
+        print("ID:",user_id)
+        return user_id
 
     def get_code_list_by_market(self, market_type):
         code_list = self.dynamicCall("GetCodeListByMarket(QString)", market_type)
