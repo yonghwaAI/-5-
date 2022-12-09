@@ -44,7 +44,7 @@ class Tech_model():
         df['ts_end'] = ss.dt.shift(-1).apply(lambda x: x.hour == 9 and x.minute == 0).values
         df['ts_start'] = ss.dt.apply(lambda x: x.hour == 9 and x.minute == 0).values
 
-    def make_binary_close_indicators(self, df: pd.DataFrame, daily_prev_close_map):
+    def make_binary_close_indicators(self, df: pd.DataFrame):
         """
         df가 변형됨
         """
@@ -80,6 +80,14 @@ class Tech_model():
             print('code:', code, '\n', 'df:\n', df)
             sampler = df.resample('1D')
             daily_prev_close_map = self.get_daily_prev_close_map(df)
+            
+            # 1. TypeError: get_daily_prev_close_map() takes 1 positional argument but 2 were given
+            #     history를 list가 아닌 dict형식으로 바꿈 -> 해결
+            # 2. TypeError: 'builtin_function_or_method' object is not iterable
+            # 3. File "c:\Users\JIHYE\Desktop\수업\4-2 인공지능금융투자\git리포지토리\-AI-financial-investment-team5\model\ml_model.py", line 87, in get_daily_dic
+            #     daily_prev_close_map = self.get_daily_prev_close_map(df)
+            #    TypeError: get_daily_prev_close_map() takes 1 positional argument but 2 were given
+            #     또 에러남
             
             datas = []
             for i, (name, group) in enumerate(sampler):
