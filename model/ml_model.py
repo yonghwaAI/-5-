@@ -44,7 +44,7 @@ class Tech_model():
         df['ts_end'] = ss.dt.shift(-1).apply(lambda x: x.hour == 9 and x.minute == 0).values
         df['ts_start'] = ss.dt.apply(lambda x: x.hour == 9 and x.minute == 0).values
 
-    def make_binary_close_indicators(self, df: pd.DataFrame, daily_prev_close_map):
+    def make_binary_close_indicators(self, df: pd.DataFrame, daily_prev_close_map=None):
         """
         df가 변형됨
         """
@@ -81,14 +81,6 @@ class Tech_model():
             sampler = df.resample('1D')
             daily_prev_close_map = self.get_daily_prev_close_map(df)
             
-            # 1. TypeError: get_daily_prev_close_map() takes 1 positional argument but 2 were given
-            #     history를 list가 아닌 dict형식으로 바꿈 -> 해결
-            # 2. TypeError: 'builtin_function_or_method' object is not iterable
-            # 3. File "c:\Users\JIHYE\Desktop\수업\4-2 인공지능금융투자\git리포지토리\-AI-financial-investment-team5\model\ml_model.py", line 87, in get_daily_dic
-            #     daily_prev_close_map = self.get_daily_prev_close_map(df)
-            #    TypeError: get_daily_prev_close_map() takes 1 positional argument but 2 were given
-            #     또 에러남
-            
             datas = []
             for i, (name, group) in enumerate(sampler):
                 if len(group) == 0:
@@ -102,14 +94,35 @@ class Tech_model():
             dic[code] = pd.concat(datas)
         print('dic:\n',dic)
 
-    # new_cols = ['ma_w', 'macd_w', 'macdsignal_w', 'macdhist_w', 'rsi_w', 'ad_w', 
-    # 'ts_end', 'ts_start', 'is_higher', 'offset_intra_day', 'target']
-    # compact_minute_dic = {code:df[new_cols] for code, df in dic.items()}
-    # merged_df = pd.merge(
-    #     compact_minute_dic['069500'], 
-    #     compact_minute_dic['114800'], 
-    #     left_index=True, 
-    #     right_index=True, 
-    #     suffixes=('_x', '_y')
-    #     )
-    # 여기서부터 또 해야함
+        # 코드별 지표컬럼명 변경
+        new_cols = ['ma_w', 'macd_w', 'macdsignal_w', 'macdhist_w', 'rsi_w', 'ad_w', 
+        'ts_end', 'ts_start', 'is_higher', 'offset_intra_day', 'target']
+        compact_minute_dic = {code:df[new_cols] for code, df in dic.items()}
+        merged_df = pd.merge(
+            compact_minute_dic['069500'], 
+            compact_minute_dic['114800'], 
+            left_index=True, 
+            right_index=True, 
+            suffixes=('_x', '_y')
+            )
+
+        # merged_df.to_pickle('.merged_for_baseline2_df.pkl')
+        merged_df = pd.read_pickle('.merged_for_baseline2_df.pkl')
+        print(merged_df)
+        print('target_x 분포 확인 : \n', merged_df.target_x.quantile([0.05, 0.25, 0.5, 0.75, 0.95]))
+
+        # Precision이 높으면 threshold가 높아진다. 
+        # Recall을 높이면 threshold가 낮아진다.
+        # precison을 놓치지 않는 상황에서 recall을 높이는 것이 좋다.
+        # ROC 커브의 중간점은 tpr-fpr이 가장 큰 지점으로, 최적의 threshold 값을 가진다.
+        decision_up_threshold=0.001771
+        decision_down_threshold=0.00184
+        merged_df['label'] = 'NOP'
+        merged_df.loc[(merged_df.target_x > 1 + decision_up_threshold) & (merged_df.target_y < 1 - decision_down_threshold), 'label'] = 'X'
+        merged_df.loc[(merged_df.target_x < 1 - decision_down_threshold) & (merged_df.target_y > 1 + decision_up_threshold), 'label'] = 'Y'
+        merged_df['label'] = merged_df.label.astype('category')
+
+        merged_df = merged_df.shift(1)
+
+        print(merged_df.label.value_counts(normalize=True))
+        print(merged_df.label.value_counts(normalize=False))
