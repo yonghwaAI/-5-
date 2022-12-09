@@ -131,69 +131,69 @@ class RSIStrategy(QThread):
         print(self.universe)'''
 
     def check_and_get_price_data(self):
-            """분봉 데이터가 존재하는지 확인하고 없다면 생성하는 함수"""
-            for idx, code in enumerate(self.universe.keys()):
-                print("({}/{}) {}".format(idx + 1, len(self.universe), code))
+        """분봉 데이터가 존재하는지 확인하고 없다면 생성하는 함수"""
+        for idx, code in enumerate(self.universe.keys()):
+            print("({}/{}) {}".format(idx + 1, len(self.universe), code))
 
-                # (1)케이스: 분봉 데이터가 아예 없는지 확인(장 종료 이후)
-                if check_transaction_closed() and not check_table_exist(self.strategy_name, code):
-                    print("분봉 데이터가 없음")
-                    # API를 이용해 조회한 가격 데이터 price_df에 저장
-                    price_df = self.kiwoom.get_price_data(code)
-                    # 코드를 테이블 이름으로 해서 데이터베이스에 저장
-                    insert_df_to_db(self.strategy_name, code, price_df)
+            # (1)케이스: 분봉 데이터가 아예 없는지 확인(장 종료 이후)
+            if check_transaction_closed() and not check_table_exist(self.strategy_name, code):
+                print("분봉 데이터가 없음")
+                # API를 이용해 조회한 가격 데이터 price_df에 저장
+                price_df = self.kiwoom.get_price_data(code)
+                # 코드를 테이블 이름으로 해서 데이터베이스에 저장
+                insert_df_to_db(self.strategy_name, code, price_df)
+                # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
+                self.universe[code]['price_df'] = price_df
+            else:
+                # (2), (3), (4) 케이스: 일봉 데이터가 있는 경우
+                # (2)케이스: 장이 종료된 경우 API를 이용해 얻어온 데이터를 저장
+                if check_transaction_closed():
+                    print("장이 종료된 경우")
+                    # 저장된 데이터의 가장 최근 일자를 조회
+                    sql = "select max(`{}`) from `{}`".format('index', code)
+
+                    cur = execute_sql(self.strategy_name, sql)
+
+                    # 분봉 데이터를 저장한 가장 최근 일자를 조회
+                    last_date = cur.fetchone()
+
+                    # 오늘 날짜를 20210101 형태로 지정
+                    now = datetime.now().strftime("%Y%m%d%H%M")
+
+                    # -------------------------------------------
+                    # 데이터베이스에 저장된 데이터 조회
+                    sql = "select * from `{}`".format(code)
+                    cur = execute_sql(self.strategy_name, sql)
+                    cols = [column[0] for column in cur.description]
+                    # 데이터베이스에서 조회한 데이터를 DataFrame으로 변환해서 저장
+                    price_df = pd.DataFrame.from_records(data=cur.fetchall(), columns=cols)
+                    price_df = price_df.set_index('index')
                     # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
                     self.universe[code]['price_df'] = price_df
+                    # -------------------------------------------
+
+
+                    # 최근 저장 일자가 오늘이 아닌지 확인
+                    if last_date[0] != now:
+                        print("최근 저장 일자가 오늘이 아님")
+                        price_df = self.kiwoom.get_price_data(code)
+                        # 코드를 테이블 이름으로 해서 데이터베이스에 저장
+                        insert_df_to_db(self.strategy_name, code, price_df)
+                        # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
+                        self.universe[code]['price_df'] = price_df
+
+                # (3), (4) 케이스: 장 시작 전이거나 장 중인 경우 데이터베이스에 저장된 데이터 조회
                 else:
-                    # (2), (3), (4) 케이스: 일봉 데이터가 있는 경우
-                    # (2)케이스: 장이 종료된 경우 API를 이용해 얻어온 데이터를 저장
-                    if check_transaction_closed():
-                        print("장이 종료된 경우")
-                        # 저장된 데이터의 가장 최근 일자를 조회
-                        sql = "select max(`{}`) from `{}`".format('index', code)
+                    print("장 시작 전이거나 장 중인 경우")
+                    sql = "select * from `{}`".format(code)
+                    cur = execute_sql(self.strategy_name, sql)
+                    cols = [column[0] for column in cur.description]
 
-                        cur = execute_sql(self.strategy_name, sql)
-
-                        # 분봉 데이터를 저장한 가장 최근 일자를 조회
-                        last_date = cur.fetchone()
-
-                        # 오늘 날짜를 20210101 형태로 지정
-                        now = datetime.now().strftime("%Y%m%d%H%M")
-
-                        # -------------------------------------------
-                        # 데이터베이스에 저장된 데이터 조회
-                        sql = "select * from `{}`".format(code)
-                        cur = execute_sql(self.strategy_name, sql)
-                        cols = [column[0] for column in cur.description]
-                        # 데이터베이스에서 조회한 데이터를 DataFrame으로 변환해서 저장
-                        price_df = pd.DataFrame.from_records(data=cur.fetchall(), columns=cols)
-                        price_df = price_df.set_index('index')
-                        # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
-                        self.universe[code]['price_df'] = price_df
-                        # -------------------------------------------
-
-
-                        # 최근 저장 일자가 오늘이 아닌지 확인
-                        if last_date[0] != now:
-                            print("최근 저장 일자가 오늘이 아님")
-                            price_df = self.kiwoom.get_price_data(code)
-                            # 코드를 테이블 이름으로 해서 데이터베이스에 저장
-                            insert_df_to_db(self.strategy_name, code, price_df)
-                            # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
-                            self.universe[code]['price_df'] = price_df
-
-                    # (3), (4) 케이스: 장 시작 전이거나 장 중인 경우 데이터베이스에 저장된 데이터 조회
-                    else:
-                        print("장 시작 전이거나 장 중인 경우")
-                        sql = "select * from `{}`".format(code)
-                        cur = execute_sql(self.strategy_name, sql)
-                        cols = [column[0] for column in cur.description]
-
-                        # 데이터베이스에서 조회한 데이터를 DataFrame으로 변환해서 저장
-                        price_df = pd.DataFrame.from_records(data=cur.fetchall(), columns=cols)
-                        price_df = price_df.set_index('index')
-                        # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
-                        self.universe[code]['price_df'] = price_df
+                    # 데이터베이스에서 조회한 데이터를 DataFrame으로 변환해서 저장
+                    price_df = pd.DataFrame.from_records(data=cur.fetchall(), columns=cols)
+                    price_df = price_df.set_index('index')
+                    # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
+                    self.universe[code]['price_df'] = price_df
     '''
     def build_up_input_features(self,df: pd.DataFrame):
         self.make_basic_features(df)
@@ -251,11 +251,10 @@ class RSIStrategy(QThread):
 
     ''' 
 
-    def run(self):
-        """실질적 수행 역할을 하는 함수"""
+    def check_features(self):
         # 기술적 기표 가져오기
-        print(self.universe['069500'])
-        print(self.universe['069500']['price_df'])
+        # print("self.universe['069500']\n",self.universe['069500'])
+        # print("self.universe['069500']['price_df']\n",self.universe['069500']['price_df'])
 
         universe_item_069500 = self.universe['069500']
         df_069500 = universe_item_069500['price_df'].copy()
@@ -269,7 +268,13 @@ class RSIStrategy(QThread):
         print('------------------------------------------------------------------------------------------------- \n')
         print('df_114800\n')
         print(df_114800.iloc[[0,10,20,30,40,50,60,70,80,90,100,110,120,130,140],5:])
+        print('\n')
 
+        self.tech.get_daily_dic(self.universe)                    
+
+    def run(self):
+        """실질적 수행 역할을 하는 함수"""
+        self.check_features()
         while self.is_init_success:
             try:
                 # (0)장중인지 확인
