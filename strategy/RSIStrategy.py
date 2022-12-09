@@ -194,82 +194,15 @@ class RSIStrategy(QThread):
                         price_df = price_df.set_index('index')
                         # 가격 데이터를 self.universe에서 접근할 수 있도록 저장
                         self.universe[code]['price_df'] = price_df
-    '''
-    def build_up_input_features(self,df: pd.DataFrame):
-        self.make_basic_features(df)
-        self.make_window_features(df)
-        self.make_binary_indicators(df)
-
-    def make_basic_features(self, df: pd.DataFrame):
-        """
-        df가 변형됨
-        """
-        ma = talib.MA(df['close'], timeperiod=30)
-        macd, macdsignal, macdhist = talib.MACD(df['close'])
-        rsi = talib.RSI(df['close'], timeperiod=14)
-        ad = talib.AD(df['high'], df['low'], df['close'], df['volume'])
-
-        df['ma'] = ma
-        df['macd'] = macd
-        df['macdsignal'] = macdsignal
-        df['macdhist'] = macdhist
-        df['rsi'] = rsi
-        df['ad'] = ad
-
-        df.index = pd.to_datetime(df.index)
-        df['offset_intra_day'] = ((df.index - df.index.floor('D') - pd.Timedelta('9h')).total_seconds()/(60*60*6.5)).values
         
-    def make_window_features(self, df: pd.DataFrame, cols=['ma', 'macd', 'macdsignal', 'macdhist', 'rsi', 'ad'], window_size=10):
-        """
-        df가 변형됨: 과거 윈도우 동안의 평균값대비 현재 값의 차이를 계산
-        """
-        for col in cols:
-            prev_summary = df[col].rolling(window=window_size).mean().shift(1)
-            df[f'{col}_w'] = (df[col] - prev_summary)
-
-    def make_binary_dt_features(self, df: pd.DataFrame):
-        """
-        df가 변형됨
-        """
-        ss = df.reset_index()
-        ss['dt'] = ss['index']
-        df['ts_end'] = ss.dt.shift(-1).apply(lambda x: x.hour == 9 and x.minute == 0).values
-        df['ts_start'] = ss.dt.apply(lambda x: x.hour == 9 and x.minute == 0).values
-
-    def make_binary_close_indicators(self, df: pd.DataFrame):
-        """
-        df가 변형됨
-        """
-        daily_prev_close = df.groupby(df.index.strftime('%Y-%m-%d')).close.last().shift(1)
-        xx = pd.Series(df.index.strftime('%Y-%m-%d').map(daily_prev_close).values, index=df.index)
-        df['is_higher'] = xx < df.close
-        df.loc[xx.isna(), 'is_higher']=np.nan
-
-    def make_binary_indicators(self, df: pd.DataFrame):
-        self.make_binary_dt_features(df)
-        self.make_binary_close_indicators(df)
-
-    ''' 
-
+###########
+    
     def run(self):
         """실질적 수행 역할을 하는 함수"""
-        # 기술적 기표 가져오기
-        print(self.universe['069500'])
-        print(self.universe['069500']['price_df'])
-
-        universe_item_069500 = self.universe['069500']
-        df_069500 = universe_item_069500['price_df'].copy()
-        universe_item_114800 = self.universe['114800']
-        df_114800 = universe_item_114800['price_df'].copy()
-
-        self.tech.build_up_input_features(df_069500)
-        self.tech.build_up_input_features(df_114800)
-        print('df_069500\n')
-        print(df_069500.iloc[[0,10,20,30,40,50,60,70,80,90,100,110,120,130,140],5:])
         print('------------------------------------------------------------------------------------------------- \n')
-        print('df_114800\n')
-        print(df_114800.iloc[[0,10,20,30,40,50,60,70,80,90,100,110,120,130,140],5:])
+        self.tech.get_daily_dic(self.universe)
 
+        # 접주 주문 및 매수/매도 대상 확인
         while self.is_init_success:
             try:
                 # (0)장중인지 확인
@@ -304,8 +237,6 @@ class RSIStrategy(QThread):
 
             except Exception as e:
                 print(traceback.format_exc())
-                # LINE 메시지를 보내는 부분
-            '''    send_message(traceback.format_exc(), RSI_STRATEGY_MESSAGE_TOKEN) '''
 
 
     def set_universe_real_time(self):
