@@ -1,5 +1,10 @@
 # AIFT team5 
 
+## 팀원
+ - 20180789 정용화(팀장)
+ - 20200942 이서은
+ - 20180782 이지혜
+
 * 현재 진행 상황 … 미정
 * 이슈상황 … 전부
 * 목표
@@ -20,14 +25,13 @@ time_budget
 
  - xgboost:(accuracy = 0.8458850931677019)
    - learning curve: 
-      <img src="https://user-images.githubusercontent.com/90076289/206838013-c392d429-67a9-4c8f-a0d3-378f60126232.png" width="400" height="250"/>
+      <img src="https://user-images.githubusercontent.com/90076289/206838013-c392d429-67a9-4c8f-a0d3-378f60126232.png" width="200" height="400"/>
    - 혼동행렬:
-      <img src="https://user-images.githubusercontent.com/90076289/206838046-141eb9ae-06b2-4450-a4ae-28218c97ad99.png" width="300" height="150"/>
+      ![image](https://user-images.githubusercontent.com/90076289/206838046-141eb9ae-06b2-4450-a4ae-28218c97ad99.png)
      
  - random forest(accuracy = 0.7472826086956522)
    - learning curve: 
-       <img src="https://user-images.githubusercontent.com/90076289/206837904-d4079625-e095-4947-b630-da95b9d7354d.png" width="400" height="250"/>
+       ![image](https://user-images.githubusercontent.com/90076289/206837904-d4079625-e095-4947-b630-da95b9d7354d.png)
    - 혼동행렬:
-       <img src="https://user-images.githubusercontent.com/90076289/206837908-2c28151e-102f-4465-bbac-190e1dc6cb2a.png" width="300" height="150"/>
-       
+       ![image](https://user-images.githubusercontent.com/90076289/206837908-2c28151e-102f-4465-bbac-190e1dc6cb2a.png)
 
