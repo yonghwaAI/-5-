@@ -17,3 +17,7 @@ estimator_list
  - 사용할 모델의 종류. 'auto'를 선택할 수 있음. 이외 직접 선택할 수 있는 목록: 'lgbm', 'xgboost', 'xgb_limitdepth', 'catboost', 'rf', 'extra_tree'
 time_budget 
  - 시간에 대한 제약조건. '-1' 입력 시, 무제한
+ - xgboost: 0.8458850931677019
+   - ![image](https://user-images.githubusercontent.com/90076289/206831315-7b620c99-d189-4a9c-a468-6dcef23adf76.png)
+ - random forest
+   - 
