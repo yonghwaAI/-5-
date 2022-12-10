@@ -134,8 +134,13 @@ class Tech_model():
         # Recall을 높이면 threshold가 낮아진다.
         # precison을 놓치지 않는 상황에서 recall을 높이는 것이 좋다.
         # ROC 커브의 중간점은 tpr-fpr이 가장 큰 지점으로, 최적의 threshold 값을 가진다.
-        decision_up_threshold=0.001771
-        decision_down_threshold=0.00184
+        
+        # 1 - target_x의 상위 95%
+        decision_up_threshold= merged_df.target_x.quantile(0.95) - 1
+        # 1 - target_x의 하위 5%
+        decision_down_threshold= 1 - merged_df.target_x.quantile(0.05)
+        print('\nUP: ', decision_up_threshold)
+        print('Down : ',decision_down_threshold)
         merged_df['label'] = 'NOP'
         merged_df.loc[(merged_df.target_x > 1 + decision_up_threshold) & (merged_df.target_y < 1 - decision_down_threshold), 'label'] = 'X'
         merged_df.loc[(merged_df.target_x < 1 - decision_down_threshold) & (merged_df.target_y > 1 + decision_up_threshold), 'label'] = 'Y'
@@ -145,3 +150,7 @@ class Tech_model():
 
         print(merged_df.label.value_counts(normalize=True))
         print(merged_df.label.value_counts(normalize=False))
+
+        merged_df.to_csv('data.csv', index=True)
+        
+        # return merged_df
