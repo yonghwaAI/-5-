@@ -20,7 +20,7 @@ time_budget
 
  - xgboost:(accuracy = 0.8458850931677019)
    - learning curve: 
-      ![image](https://user-images.githubusercontent.com/90076289/206838013-c392d429-67a9-4c8f-a0d3-378f60126232.png)
+      <img src="https://user-images.githubusercontent.com/90076289/206838013-c392d429-67a9-4c8f-a0d3-378f60126232.png" width="200" height="400"/>
    - 혼동행렬:
       ![image](https://user-images.githubusercontent.com/90076289/206838046-141eb9ae-06b2-4450-a4ae-28218c97ad99.png)
      
