@@ -9,9 +9,6 @@ import traceback
 import sys
 import numpy as np
 import pandas as pd
-import talib
-import pickle
-
 class RSIStrategy(QThread):
     def __init__(self):
         QThread.__init__(self)
@@ -254,8 +251,6 @@ class RSIStrategy(QThread):
     def run(self):
         """실질적 수행 역할을 하는 함수"""
         self.tech.get_daily_dic(self.universe)                    
-
-        self.check_features()
         while self.is_init_success:
             try:
                 # (0)장중인지 확인
