@@ -31,7 +31,7 @@ time_budget
      
  - random forest(accuracy = 0.7472826086956522)
    - learning curve: 
-       <img src="https://user-images.githubusercontent.com/90076289/206837904-d4079625-e095-4947-b630-da95b9d7354d.png" width="450" height="200"/>
+       <img src="https://user-images.githubusercontent.com/90076289/206837904-d4079625-e095-4947-b630-da95b9d7354d.png" width="420" height="220"/>
    - 혼동행렬:
        <img src="https://user-images.githubusercontent.com/90076289/206837908-2c28151e-102f-4465-bbac-190e1dc6cb2a.png" width="400" height="200"/>
 
