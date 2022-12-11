@@ -25,13 +25,17 @@ time_budget
 
  - xgboost:(accuracy = 0.8458850931677019)
    - learning curve: 
-      <img src="https://user-images.githubusercontent.com/90076289/206838013-c392d429-67a9-4c8f-a0d3-378f60126232.png" width="200" height="400"/>
+   
+      <img src="https://user-images.githubusercontent.com/90076289/206838013-c392d429-67a9-4c8f-a0d3-378f60126232.png" width="400" height="200"/>
    - 혼동행렬:
-      ![image](https://user-images.githubusercontent.com/90076289/206838046-141eb9ae-06b2-4450-a4ae-28218c97ad99.png)
+   
+      <img src="https://user-images.githubusercontent.com/90076289/206838046-141eb9ae-06b2-4450-a4ae-28218c97ad99.png" width="400" height="200"/>
      
  - random forest(accuracy = 0.7472826086956522)
    - learning curve: 
-       ![image](https://user-images.githubusercontent.com/90076289/206837904-d4079625-e095-4947-b630-da95b9d7354d.png)
+   
+       <img src="https://user-images.githubusercontent.com/90076289/206837904-d4079625-e095-4947-b630-da95b9d7354d.png" width="420" height="220"/>
    - 혼동행렬:
-       ![image](https://user-images.githubusercontent.com/90076289/206837908-2c28151e-102f-4465-bbac-190e1dc6cb2a.png)
+   -
+       <img src="https://user-images.githubusercontent.com/90076289/206837908-2c28151e-102f-4465-bbac-190e1dc6cb2a.png" width="400" height="200"/>
 
