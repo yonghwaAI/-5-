@@ -14,6 +14,7 @@ class Kiwoom(QAxWidget):
         self._comm_connect()
 
         self.account_number = self.get_account_number()
+        self.user_id = self.get_user_id()
 
         self.tr_event_loop = QEventLoop()
 
@@ -43,7 +44,7 @@ class Kiwoom(QAxWidget):
 
     def _login_slot(self, err_code):
         if err_code == 0:
-            print("connected")
+            print("\nCONNECTED>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
         else:
             print("not connected")
 
@@ -65,7 +66,9 @@ class Kiwoom(QAxWidget):
 
     def get_user_id(self, tag="USER_ID"):
         user_id = self.dynamicCall("GetLoginInfo(QString)", tag)  # tag로 전달한 요청에 대한 응답을 받아옴
+        user_name = self.dynamicCall("GetLoginInfo(QString)", "USER_NAME")
         print("ID:",user_id)
+        print("NAME:",user_name)
         return user_id
 
     def get_code_list_by_market(self, market_type):

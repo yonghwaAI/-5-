@@ -11,10 +11,10 @@ import numpy as np
 import pandas as pd
 
 
-class RSIStrategy(QThread):
+class Strategy(QThread):
     def __init__(self):
         QThread.__init__(self)
-        self.strategy_name = "RSIStrategy"
+        self.strategy_name = "Strategy"
         self.kiwoom = Kiwoom()
         self.tech = Tech_model()
         
@@ -313,11 +313,6 @@ class RSIStrategy(QThread):
 
         order_result = self.kiwoom.send_order('send_sell_order', '1001', 2, code, quantity, ask, '00')
 
-        # LINE 메시지를 보내는 부분
-        # message = "[{}]sell order is done! quantity:{}, ask:{}, order_result:{}".format(code, quantity, ask,
-        #                                                                                 order_result)
-        # send_message(message, RSI_STRATEGY_MESSAGE_TOKEN)
-
     def check_buy_signal_and_order(self, code):
         """매수 대상인지 확인하고 주문을 접수하는 함수"""
         # 매수 가능 시간 확인
@@ -409,14 +404,6 @@ class RSIStrategy(QThread):
             # _on_chejan_slot가 늦게 동작할 수도 있기 때문에 미리 약간의 정보를 넣어둠
             self.kiwoom.order[code] = {'주문구분': '매수', '미체결수량': quantity}
 
-            # LINE 메시지를 보내는 부분
-        '''  message = "[{}]buy order is done! quantity:{}, bid:{}, order_result:{}, deposit:{}, get_balance_count:{}, get_buy_order_count:{}, balance_len:{}".format(
-                code, quantity, bid, order_result, self.deposit, self.get_balance_count(), self.get_buy_order_count(),
-                len(self.kiwoom.balance))
-            send_message(message, RSI_STRATEGY_MESSAGE_TOKEN)
-        # 매수신호가 없다면 종료
-        else:
-            return'''
 
     def get_balance_count(self):
         """매도 주문이 접수되지 않은 보유 종목 수를 계산하는 함수"""
