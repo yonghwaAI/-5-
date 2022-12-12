@@ -15,9 +15,7 @@ from flaml.ml import sklearn_metric_loss_score
 from flaml.data import get_output_from_log
 import matplotlib.pyplot as plt
 '''
-from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
-
 import pandas as pd
 import numpy as np
 import talib
@@ -112,7 +110,7 @@ class Tech_model():
                 self.make_target(daily_df, window_size=30)
                 datas.append(daily_df.dropna(axis=0))
             dic[code] = pd.concat(datas)
-        print('dic:\n',dic)
+        #print('dic:\n',dic)
 
         # 코드별 지표컬럼명 변경
         new_cols = ['ma_w', 'ma20_w', 'ma60_w', 'macd_w', 'macdsignal_w', 'macdhist_w', 'rsi_w', 'ad_w', 
@@ -129,14 +127,14 @@ class Tech_model():
         merged_df.to_pickle('.merged_for_baseline2_df.pkl')
         merged_df = pd.read_pickle('.merged_for_baseline2_df.pkl')
         print(merged_df)
-        print('target_x 분포 확인 : \n', merged_df.target_x.quantile([0.05, 0.25, 0.5, 0.75, 0.95]))
+        # print('target_x 분포 확인 : \n', merged_df.target_x.quantile([0.05, 0.25, 0.5, 0.75, 0.95]))
         
         # 1 - target_x의 상위 90%
         decision_up_threshold= merged_df.target_x.quantile(0.90) - 1
         # 1 - target_x의 하위 10%
         decision_down_threshold= 1 - merged_df.target_x.quantile(0.90)
-        print('\nUP: ', decision_up_threshold)
-        print('Down : ',decision_down_threshold)
+        # print('\nUP: ', decision_up_threshold)
+        # print('Down : ',decision_down_threshold)
         merged_df['label'] = 'NOP'
         merged_df.loc[(merged_df.target_x > 1 + decision_up_threshold) & (merged_df.target_y < 1 - decision_down_threshold), 'label'] = 'X'
         merged_df.loc[(merged_df.target_x < 1 - decision_down_threshold) & (merged_df.target_y > 1 + decision_up_threshold), 'label'] = 'Y'
@@ -144,7 +142,7 @@ class Tech_model():
 
         merged_df = merged_df.shift(1)
 
-        print(merged_df.label.value_counts(normalize=True))
-        print(merged_df.label.value_counts(normalize=False))
+        # print(merged_df.label.value_counts(normalize=True))
+        # print(merged_df.label.value_counts(normalize=False))
 
         merged_df.to_csv('data.csv', index=True)
