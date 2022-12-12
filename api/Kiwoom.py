@@ -14,6 +14,7 @@ class Kiwoom(QAxWidget):
         self._comm_connect()
 
         self.account_number = self.get_account_number()
+        self.user_id = self.get_user_id()
 
         self.tr_event_loop = QEventLoop()
 
@@ -98,28 +99,7 @@ class Kiwoom(QAxWidget):
             for key, val in self.tr_data.items():
                 ohlcv[key] += val
 
-
-        # 일봉데이터 조회
-        # self.dynamicCall("SetInputValue(QString, QString)", "종목코드", code)
-        # self.dynamicCall("SetInputValue(QString, QString)", "수정주가구분", "1")
-        # self.dynamicCall("CommRqData(QString, QString, int, QString)", "opt10081_req", "opt10081", 0, "0001")
-
-        # self.tr_event_loop.exec_()
-
-        # ohlcv = self.tr_data
-
-        # while self.has_next_tr_data:
-        #     self.dynamicCall("SetInputValue(QString, QString)", "종목코드", code)
-        #     self.dynamicCall("SetInputValue(QString, QString)", "수정주가구분", "1")
-        #     self.dynamicCall("CommRqData(QString, QString, int, QString)", "opt10081_req", "opt10081", 2, "0001")
-        #     self.tr_event_loop.exec_()
-
-            # for key, val in self.tr_data.items():
-            #     ohlcv[key] += val
-
         df = pd.DataFrame(ohlcv, columns=['open', 'high', 'low', 'close', 'volume'], index=ohlcv['date'])
-        # print(df.index[0])
-        # 인덱스기준으로 내림차순한 df
         return df[::-1]
 
     def _on_receive_tr_data(self, screen_no, rqname, trcode, record_name, next, unused1, unused2, unused3, unused4):
@@ -208,6 +188,7 @@ class Kiwoom(QAxWidget):
                 }
 
             self.tr_data = self.order
+        
 
         elif rqname == "opw00018_req":
             for i in range(tr_data_cnt):
