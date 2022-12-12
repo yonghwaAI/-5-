@@ -12,6 +12,9 @@
  2. PER PBR 등 주가지표 이용
  3. 머신러닝
  
+ ![image](https://user-images.githubusercontent.com/113934740/207043000-8e99cde2-f061-48d2-8fc7-5ee85c25184f.png)
+
+ 
  ## main()
  - rsi_strategy = RSIStrategy() : sub thread 생성 
  - rsi_strategy.start()         : sub thread의 run 메소드 호출
