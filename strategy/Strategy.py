@@ -2,6 +2,7 @@ from api.Kiwoom import *
 from util.db_helper import *
 from util.time_helper import *
 from model.ml_model import *
+from predict.predicti import InputBuilder_BaselineModel, BaselineModel
 import math
 import traceback
 import sys
@@ -15,6 +16,8 @@ class Strategy(QThread):
         self.strategy_name = "Strategy"
         self.kiwoom = Kiwoom()
         self.tech = Tech_model()
+        self.input = InputBuilder_BaselineModel()
+        self.predict = BaselineModel()
 
         # 계좌 예수금
         self.deposit = 0
@@ -264,7 +267,7 @@ class Strategy(QThread):
 
         order_result = self.kiwoom.send_order('send_sell_order', '1001', 2, code, quantity, ask, '00')
 
-    '''def check_buy_signal_and_order(self, code):
+    def check_buy_signal_and_order(self, code):
         """매수 대상인지 확인하고 주문을 접수하는 함수"""
         # 매수 가능 시간 확인
         if not check_adjacent_transaction_closed():
@@ -286,14 +289,18 @@ class Strategy(QThread):
         df = universe_item['price_df'].copy()
         # 과거 가격 데이터에 금일 날짜로 데이터 추가
         df.loc[datetime.now().strftime('%Y%m%d%H%M')] = today_price_data
-        # 2 거래일 전 날짜(index)를 구함
-        idx = df.index.get_loc(datetime.now().strftime('%Y%m%d%H%M')) - 2
-        # 위 index로부터 2 거래일 전 종가를 얻어옴
-        close_2days_ago = df.iloc[idx]['close']
-        # 2 거래일 전 종가와 현재가를 비교함
-        price_diff = (close - close_2days_ago) / close_2days_ago * 100
+
+        # # 2 거래일 전 날짜(index)를 구함
+        # idx = df.index.get_loc(datetime.now().strftime('%Y%m%d%H%M')) - 2
+
+        # # 위 index로부터 2 거래일 전 종가를 얻어옴
+        # close_2days_ago = df.iloc[idx]['close']
+
+        # # 2 거래일 전 종가와 현재가를 비교함
+        # price_diff = (close - close_2days_ago) / close_2days_ago * 100
+
         # (3)매수 신호 확인(조건에 부합하면 주문 접수) ★★★★★★여기에 모델결과 적용★★★★★★
-        if ma20 > ma60 and rsi < 5 and price_diff < -2:
+        if self.predict():
             # (4)이미 보유한 종목, 매수 주문 접수한 종목의 합이 보유 가능 최대치(10개)라면 더 이상 매수 불가하므로 종료
             if (self.get_balance_count() + self.get_buy_order_count()) >= 10:
                 return
@@ -315,7 +322,7 @@ class Strategy(QThread):
             # (9)계산을 바탕으로 지정가 매수 주문 접수
             order_result = self.kiwoom.send_order('send_buy_order', '1001', 1, code, quantity, bid, '00')
             # _on_chejan_slot가 늦게 동작할 수도 있기 때문에 미리 약간의 정보를 넣어둠
-            self.kiwoom.order[code] = {'주문구분': '매수', '미체결수량': quantity}'''
+            self.kiwoom.order[code] = {'주문구분': '매수', '미체결수량': quantity}
 
     def get_balance_count(self):
         """매도 주문이 접수되지 않은 보유 종목 수를 계산하는 함수"""
