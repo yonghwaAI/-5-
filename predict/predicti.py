@@ -20,23 +20,27 @@ class InputBuilder_BaselineModel:
     self.__X_test = None
     self.merge_and_make_test_input()
 
-  #@property
+  @property
   def X_test(self):
     return self.__X_test
 
   def unpack(self, universe:dict):
     df_069500 = universe['069500']['price_df']   
-    df_069500 = pd.DataFrame.from_records([
-        {'dt':df_069500.index,'open':df_069500.open, 'high':df_069500.high, 'low':df_069500.low, 'close':df_069500.close, 'volume':df_069500.volume}])
-    # 오류 : index는 dt type이 아님
-    df_069500['dt'] = pd.to_datetime(df_069500['dt'], format='%Y%m%d%H%M').dt.tz_localize('Asia/Seoul')
-    df_069500.set_index('dt')
+    # df_069500 = df_069500.reset_index()
+    # df_069500['dt'] = df_069500['index']
+    # df_069500 = pd.DataFrame.from_records([
+    #     {'dt':df_069500.dt,'open':df_069500.open, 'high':df_069500.high, 'low':df_069500.low, 'close':df_069500.close, 'volume':df_069500.volume}])
+    # # 오류 : index는 dt type이 아님
+    # df_069500['dt'] = pd.to_datetime(df_069500['dt'])#.dt.tz_localize('Asia/Seoul') # , format='%Y%m%d%H%M%S'
+    # df_069500.set_index('dt')
 
     df_114800 = universe['114800']['price_df']
-    df_114800 = pd.DataFrame.from_records([
-        {'dt':df_114800.index,'open':df_114800.open, 'high':df_114800.high, 'low':df_114800.low, 'close':df_114800.close, 'volume':df_114800.volume}])
-    df_114800['dt'] = pd.to_datetime(df_114800['dt'], format='%Y%m%d%H%M').dt.tz_localize('Asia/Seoul')
-    df_114800.set_index('dt')
+    # df_114800 = df_114800.reset_index()
+    # df_114800['dt'] = df_114800['index']
+    # df_114800 = pd.DataFrame.from_records([
+    #     {'dt':df_114800.dt,'open':df_114800.open, 'high':df_114800.high, 'low':df_114800.low, 'close':df_114800.close, 'volume':df_114800.volume}])
+    # df_114800['dt'] = pd.to_datetime(df_114800['dt'])# , format='%Y%m%d%H%M').dt.tz_localize('Asia/Seoul')
+    # df_114800.set_index('dt')
 
     self.history_minute_dic['069500'] = df_069500
     self.history_minute_dic['114800'] = df_114800
@@ -54,8 +58,8 @@ class InputBuilder_BaselineModel:
             'ts_end', 'ts_start', 'is_higher', 'offset_intra_day']
     compact_minute_dic = {code:df[new_cols] for code, df in self.history_minute_dic.items()}
     merged_df = pd.merge(
-      compact_minute_dic['X'], 
-      compact_minute_dic['Y'],
+      compact_minute_dic['069500'], 
+      compact_minute_dic['114800'],
       left_index=True, 
       right_index=True, 
       suffixes=('_x', '_y')
@@ -88,7 +92,7 @@ class InputBuilder_BaselineModel:
     df.index = pd.to_datetime(df.index)
     df['offset_intra_day'] = ((df.index - df.index.floor('D') - pd.Timedelta('9h')).total_seconds()/(60*60*6.5)).values
     
-  def make_window_features(self, df: pd.DataFrame, cols=['ma', 'macd', 'macdsignal', 'macdhist', 'rsi', 'ad'], window_size=10):
+  def make_window_features(self, df: pd.DataFrame, cols=['ma', 'ma20', 'ma60', 'macd', 'macdsignal', 'macdhist', 'rsi', 'ad'], window_size=10):
     """
     df가 변형됨: 과거 윈도우 동안의 평균값대비 현재 값의 차이를 계산
     """
@@ -125,6 +129,7 @@ class BaselineModel:
         self.model = pickle.load(f)
 
   def predict(self, X_test):
+    X_test = X_test.astype({'is_higher_x':'bool','is_higher_y':'bool'})
     return self.model.predict(X_test)
 
   def predict_proba(self, X_test):
