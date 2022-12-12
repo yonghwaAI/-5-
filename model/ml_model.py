@@ -1,15 +1,40 @@
-# 모델링 파일... 춥다...
+'''
+import plotly.figure_factory as ff
+import plotly.graph_objects as go
+from flaml import AutoML
+automl = AutoML()
+from sktime.forecasting.model_selection import temporal_train_test_split
+
+from imblearn.over_sampling import RandomOverSampler
+from imblearn.combine import SMOTETomek
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+
+from flaml.ml import sklearn_metric_loss_score
+from flaml.data import get_output_from_log
+import matplotlib.pyplot as plt
+'''
+
 import pandas as pd
 import numpy as np
 import talib
 import pickle
-
-
+from xgboost import XGBClassifier
 
 class Tech_model():
     def __init__(self):
         super().__init__()
     
+    def predict(self, df: pd.DataFrame):
+        with open('model_xgboost.pkl', 'rb') as f:
+            model = pickle.load(f)
+        
+        # 맨 마지막 행
+        df_last = df.iloc[-1]
+
+        return(model.predict())
+        
     # 1. 기술적 지표 추가
     def make_basic_features(self, df: pd.DataFrame):
         """
@@ -21,6 +46,8 @@ class Tech_model():
         ad = talib.AD(df['high'], df['low'], df['close'], df['volume'])
 
         df['ma'] = ma
+        df['ma20'] = df['close'].rolling(window=20, min_periods=1).mean()
+        df['ma60'] = df['close'].rolling(window=60, min_periods=1).mean()
         df['macd'] = macd
         df['macdsignal'] = macdsignal
         df['macdhist'] = macdhist
@@ -30,7 +57,7 @@ class Tech_model():
         df.index = pd.to_datetime(df.index)
         df['offset_intra_day'] = ((df.index - df.index.floor('D') - pd.Timedelta('9h')).total_seconds()/(60*60*6.5)).values
         
-    def make_window_features(self, df: pd.DataFrame, cols=['ma', 'macd', 'macdsignal', 'macdhist', 'rsi', 'ad'], window_size=10):
+    def make_window_features(self, df: pd.DataFrame, cols=['ma', 'ma20', 'ma60', 'macd', 'macdsignal', 'macdhist', 'rsi', 'ad'], window_size=10):
         """
         df가 변형됨: 과거 윈도우 동안의 평균값대비 현재 값의 차이를 계산
         """
@@ -68,7 +95,6 @@ class Tech_model():
         """
         df['target'] = df.close.rolling(window=window_size).mean().shift(-window_size) /df.close
 
-    # 2. 일단위로 모델링
     def get_daily_prev_close_map(self, df: pd.DataFrame):
         """일별 -> 전일자 종가 """
         return df.groupby(df.index.strftime('%Y-%m-%d')).close.last().shift(1)
@@ -98,7 +124,7 @@ class Tech_model():
         print('dic:\n',dic)
 
         # 코드별 지표컬럼명 변경
-        new_cols = ['ma_w', 'macd_w', 'macdsignal_w', 'macdhist_w', 'rsi_w', 'ad_w', 
+        new_cols = ['ma_w', 'ma20_w', 'ma60_w', 'macd_w', 'macdsignal_w', 'macdhist_w', 'rsi_w', 'ad_w', 
         'ts_end', 'ts_start', 'is_higher', 'offset_intra_day', 'target']
         compact_minute_dic = {code:df[new_cols] for code, df in dic.items()}
         merged_df = pd.merge(
@@ -109,20 +135,16 @@ class Tech_model():
             suffixes=('_x', '_y')
             )
 
-        #merged_df.to_pickle('.merged_for_baseline2_df.pkl')
+        merged_df.to_pickle('.merged_for_baseline2_df.pkl')
         merged_df = pd.read_pickle('.merged_for_baseline2_df.pkl')
         print(merged_df)
         print('target_x 분포 확인 : \n', merged_df.target_x.quantile([0.05, 0.25, 0.5, 0.75, 0.95]))
-
-        # Precision이 높으면 threshold가 높아진다. 
-        # Recall을 높이면 threshold가 낮아진다.
-        # precison을 놓치지 않는 상황에서 recall을 높이는 것이 좋다.
-        # ROC 커브의 중간점은 tpr-fpr이 가장 큰 지점으로, 최적의 threshold 값을 가진다.
-# 1 - target_x의 상위 95%
-        decision_up_threshold= merged_df.target_x.quantile(0.95) - 1
+        # 1 - target_x의 상위 95%
+        decision_up_threshold= merged_df.target_x.quantile(0.90) - 1
         # 1 - target_x의 하위 5%
-        decision_down_threshold= 1 - merged_df.target_x.quantile(0.05)
-        
+        decision_down_threshold= 1 - merged_df.target_x.quantile(0.90)
+        print('\nUP: ', decision_up_threshold)
+        print('Down : ',decision_down_threshold)
         merged_df['label'] = 'NOP'
         merged_df.loc[(merged_df.target_x > 1 + decision_up_threshold) & (merged_df.target_y < 1 - decision_down_threshold), 'label'] = 'X'
         merged_df.loc[(merged_df.target_x < 1 - decision_down_threshold) & (merged_df.target_y > 1 + decision_up_threshold), 'label'] = 'Y'
@@ -132,3 +154,5 @@ class Tech_model():
 
         print(merged_df.label.value_counts(normalize=True))
         print(merged_df.label.value_counts(normalize=False))
+
+        merged_df.to_csv('data.csv', index=True)
