@@ -19,11 +19,22 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import talib
+import pickle
+from xgboost import XGBClassifier
 
 class Tech_model():
     def __init__(self):
         super().__init__()
     
+    def predict(self, df: pd.DataFrame):
+        with open('model_xgboost.pkl', 'rb') as f:
+            model = pickle.load(f)
+        
+        # 맨 마지막 행
+        df_last = df.iloc[-1]
+
+        return(model.predict())
+        
     # 1. 기술적 지표 추가
     def make_basic_features(self, df: pd.DataFrame):
         """
@@ -128,12 +139,6 @@ class Tech_model():
         merged_df = pd.read_pickle('.merged_for_baseline2_df.pkl')
         print(merged_df)
         print('target_x 분포 확인 : \n', merged_df.target_x.quantile([0.05, 0.25, 0.5, 0.75, 0.95]))
-
-        # Precision이 높으면 threshold가 높아진다. 
-        # Recall을 높이면 threshold가 낮아진다.
-        # precison을 놓치지 않는 상황에서 recall을 높이는 것이 좋다.
-        # ROC 커브의 중간점은 tpr-fpr이 가장 큰 지점으로, 최적의 threshold 값을 가진다.
-        
         # 1 - target_x의 상위 95%
         decision_up_threshold= merged_df.target_x.quantile(0.90) - 1
         # 1 - target_x의 하위 5%
