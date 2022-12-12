@@ -16,7 +16,7 @@ class Strategy(QThread):
         self.strategy_name = "Strategy"
         self.kiwoom = Kiwoom()
         self.tech = Tech_model()
-        self.predict = BaselineModel()
+        #self.predict = BaselineModel()
         self.no_record = True
 
         # 계좌 예수금
@@ -158,7 +158,7 @@ class Strategy(QThread):
         # df = self.tech.get_daily_dic(self.universe)
         
         input_builder = InputBuilder_BaselineModel(self.universe)
-        y_pred = self.model.predict(input_builder.X_test)
+        y_pred = BaselineModel().predict(input_builder.X_test)
         print('예측결과 : ', y_pred)
 
     #     # 접주 주문 및 매수/매도 대상 확인
@@ -209,184 +209,126 @@ class Strategy(QThread):
     #         # target 95% → 90%
 
 
-    # def set_universe_real_time(self):
-    #     """유니버스 실시간 체결정보 수신 등록하는 함수"""
-    #     # 임의의 fid를 하나 전달하기 위한 코드(아무 값의 fid라도 하나 이상 전달해야 정보를 얻어올 수 있음)
-    #     fids = get_fid("체결시간")
+    def set_universe_real_time(self):
+        """유니버스 실시간 체결정보 수신 등록하는 함수"""
+        # 임의의 fid를 하나 전달하기 위한 코드(아무 값의 fid라도 하나 이상 전달해야 정보를 얻어올 수 있음)
+        fids = get_fid("체결시간")
 
-    #     # universe 딕셔너리의 key값들은 종목코드들을 의미
-    #     codes = self.universe.keys()
+        # universe 딕셔너리의 key값들은 종목코드들을 의미
+        codes = self.universe.keys()
 
-    #     # 종목코드들을 ';'을 기준으로 묶어주는 작업
-    #     codes = ";".join(map(str, codes))
+        # 종목코드들을 ';'을 기준으로 묶어주는 작업
+        codes = ";".join(map(str, codes))
 
-    #     # 화면번호 9999에 종목코드들의 실시간 체결정보 수신을 요청
-    #     self.kiwoom.set_real_reg("9999", codes, fids, "0")
+        # 화면번호 9999에 종목코드들의 실시간 체결정보 수신을 요청
+        self.kiwoom.set_real_reg("9999", codes, fids, "0")
         
-    # def order_sell(self, code):
-    #     """매도 주문 접수 함수"""
-    #     # 보유 수량 확인(전량 매도 방식으로 보유한 수량을 모두 매도함)
-    #     quantity = self.kiwoom.balance[code]['보유수량']
 
-    #     # 최우선 매도 호가 확인
-    #     ask = self.kiwoom.universe_realtime_transaction_info[code]['(최우선)매도호가']
+    def return_real_data(self, code):
+        universe_item = self.universe[code]
 
-    #     order_result = self.kiwoom.send_order('send_sell_order', '1001', 2, code, quantity, ask, '00')
+        # (1)현재 체결정보가 존재하지 않는지 확인
+        if code not in self.kiwoom.universe_realtime_transaction_info.keys():
+            # 존재하지 않다면 더이상 진행하지 않고 함수 종료
+            print("매수대상 확인 과정에서 아직 체결정보가 없습니다.")
+            return
 
-    # def return_real_data(self, code):
-    #     universe_item = self.universe[code]
+        # (2)실시간 체결 정보가 존재하면 현 시점의 시가 / 고가 / 저가 / 현재가 / 누적 거래량이 저장되어 있음
+        open = self.kiwoom.universe_realtime_transaction_info[code]['시가']
+        high = self.kiwoom.universe_realtime_transaction_info[code]['고가']
+        low = self.kiwoom.universe_realtime_transaction_info[code]['저가']
+        close = self.kiwoom.universe_realtime_transaction_info[code]['현재가']
+        volume = self.kiwoom.universe_realtime_transaction_info[code]['누적거래량']
 
-    #     # (1)현재 체결정보가 존재하지 않는지 확인
-    #     if code not in self.kiwoom.universe_realtime_transaction_info.keys():
-    #         # 존재하지 않다면 더이상 진행하지 않고 함수 종료
-    #         print("매수대상 확인 과정에서 아직 체결정보가 없습니다.")
-    #         return
+        # 오늘 가격 데이터를 과거 가격 데이터(DataFrame)의 행으로 추가하기 위해 리스트로 만듦
+        today_price_data = [open, high, low, close, volume]
 
-    #     # (2)실시간 체결 정보가 존재하면 현 시점의 시가 / 고가 / 저가 / 현재가 / 누적 거래량이 저장되어 있음
-    #     open = self.kiwoom.universe_realtime_transaction_info[code]['시가']
-    #     high = self.kiwoom.universe_realtime_transaction_info[code]['고가']
-    #     low = self.kiwoom.universe_realtime_transaction_info[code]['저가']
-    #     close = self.kiwoom.universe_realtime_transaction_info[code]['현재가']
-    #     volume = self.kiwoom.universe_realtime_transaction_info[code]['누적거래량']
+        df = universe_item['price_df'].copy()
 
-    #     # 오늘 가격 데이터를 과거 가격 데이터(DataFrame)의 행으로 추가하기 위해 리스트로 만듦
-    #     today_price_data = [open, high, low, close, volume]
+        # 과거 가격 데이터에 금일 날짜로 데이터 추가
+        df.loc[datetime.now().strftime('%Y%m%d%H%M')] = today_price_data
 
-    #     df = universe_item['price_df'].copy()
+        return df
+    
+    def order_sell(self, code):
+        """매도 주문 접수 함수"""
+        # 보유 수량 확인(전량 매도 방식으로 보유한 수량을 모두 매도함)
+        quantity = self.kiwoom.balance[code]['보유수량']
+        # 최우선 매도 호가 확인
+        ask = self.kiwoom.universe_realtime_transaction_info[code]['(최우선)매도호가']
+        order_result = self.kiwoom.send_order('send_sell_order', '1001', 2, code, quantity, ask, '00')
+        print('\n 매도주문: ',order_result)
+    
+    def order_buy(self, code):
+        """매수 주문 접수 함수"""
+        print('\n 매수 전 예수금: ', self.deposit)
+        # (1)주문에 사용할 금액 계산
+        budget = self.deposit
+        # (2)최우선 매수호가 확인
+        bid = self.kiwoom.universe_realtime_transaction_info[code]['(최우선)매수호가']
+        # (3)주문 수량 계산(소수점은 제거하기 위해 버림)
+        quantity = math.floor(budget / bid)
+        # (4)현재 예수금에서 수수료를 곱한 실제 투입금액(주문 수량 * 주문 가격)을 제외해서 계산
+        amount = quantity * bid
+        self.deposit = math.floor(self.deposit - amount * 1.00015)
+        # (5)예수금이 0보다 작아질 정도로 주문할 수는 없으므로 체크
+        if self.deposit < 0:
+            return
+        # (6)계산을 바탕으로 지정가 매수 주문 접수
+        order_result = self.kiwoom.send_order('send_buy_order', '1001', 1, code, quantity, bid, '00')
+        print('\n 매수주문: ',order_result)
+        # _on_chejan_slot가 늦게 동작할 수도 있기 때문에 미리 약간의 정보를 넣어둠
+        self.kiwoom.order[code] = {'주문구분': '매수', '미체결수량': quantity}
 
-    #     # 과거 가격 데이터에 금일 날짜로 데이터 추가
-    #     df.loc[datetime.now().strftime('%Y%m%d%H%M')] = today_price_data
+    def check_buy_signal_and_order(self):
+        """매수 대상인지 확인하고 주문을 접수하는 함수
+        새 data를 universe로 받음, self.input에 넣고 X_test 값을 받음, model에 적용, 
+        nop, x, y에 따라 매수 / 매도
+        """
+        # 매수 가능 시간 확인
+        if not check_adjacent_transaction_closed():
+            return False
 
-    #     return df
+        # 실시간 유니버스 만들기
+        real_069500 = self.return_real_data('069500')
+        real_114800 = self.return_real_data('114800')
 
-    # def check_buy_signal_and_order(self):
-    #     """매수 대상인지 확인하고 주문을 접수하는 함수
-    #     새 data를 universe로 받음, self.input에 넣고 X_test 값을 받음, model에 적용, 
-    #     nop, x, y에 따라 매수 / 매도
-    #     """
-    #     # 매수 가능 시간 확인
-    #     if not check_adjacent_transaction_closed():
-    #         return False
+        real_universe = self.universe.copy()
+        real_universe['069500']['price_df'] = real_069500
+        real_universe['114800']['price_df'] = real_114800
 
-    #     # 실시간 유니버스 만들기
-    #     real_069500 = self.return_real_data('069500')
-    #     real_114800 = self.return_real_data('114800')
+        ## predict > input_value
+        input_builder = InputBuilder_BaselineModel(self.universe)
+        predict_value = BaselineModel().predict(input_builder.X_test)
+        # predict_proba = BaselineModel().predict_proba(input_builder.X_test)
 
-    #     real_universe = self.universe.copy()
-    #     real_universe['069500']['price_df'] = real_069500
-    #     real_universe['114800']['price_df'] = real_114800
-
-    #     # predict > input_value
-    #     self.input = InputBuilder_BaselineModel(real_universe).X_test
-        
-    #     predict_value = BaselineModel(self.input).predict
-    #     predict_proba = BaselineModel(self.input).predict_proba
-
-    #     # 매수 신호 확인(조건에 부합하면 주문 접수) ★★★★★★여기에 모델결과 적용★★★★★★
-    #     if predict_value == 'NOP':
-    #         print('predict_value:',predict_value)
-    #         pass
-    #     elif predict_value == 'X': # X=(kodex_200 매수 & kodex_inverse 매도)
-    #         print('predict_value:',predict_value)
-            
-    #         code = 069500
-    #         budget = self.deposit / (10 - (self.get_balance_count() + self.get_buy_order_count()))
-    #         bid = self.kiwoom.universe_realtime_transaction_info[code]['(최우선)매수호가']
-    #         quantity = math.floor(budget / bid)
-            
-    #         if self.no_record:
-    #             # 전부 매수 
-    #             self.kiwoom.send_order('send_buy_order', '1001', 1, code, quantity, bid, '00')
-    #             self.no_record = False
-    #             pass
-    #         else:
-    #             # 전부 매도
-    #             # 예수금 업데이트
-    #             # 전부 매수
-    #             pass
-    #     elif predict_value == 'Y': # Y=(kodex_200 매도 & kodex_inverse 매수)
-    #         print('predict_value:',predict_value)
-    #         if self.no_record:
-    #             # 전부 매수
-    #             self.no_record = False
-    #             pass
-    #         else:
-    #             # 전부 매도
-    #             # 예수금 업데이트
-    #             # 전부 매수
-    #             pass
-
-    # # def __build_action_list(self, action_type:str):
-    # #     if action_type == 'NOP':
-    # #     self.action_list.append(ActionNop(self.agent))
-    # #     elif action_type == 'X':
-    # #     if self.agent.account.holds(self.tag_code_dic['X']):
-    # #         self.action_list.append(ActionNop(self.agent))
-    # #     elif self.agent.account.holds(self.tag_code_dic['Y']):
-    # #         self.action_list.append(ActionSell(self.agent, self.tag_code_dic['Y']))
-    # #         self.action_list.append(ActionUpdateDeposit(self.agent))
-    # #         self.action_list.append(ActionBuy(self.agent, self.tag_code_dic['X']))
-    # #     else:
-    # #         self.action_list.append(ActionBuy(self.agent, self.tag_code_dic['X']))
-    # #     elif action_type == 'Y':
-    # #     if self.agent.account.holds(self.tag_code_dic['Y']):
-    # #         self.action_list.append(ActionNop(self.agent))
-    # #     elif self.agent.account.holds(self.tag_code_dic['X']):
-    # #         self.action_list.append(ActionSell(self.agent, self.tag_code_dic['X']))
-    # #         self.action_list.append(ActionUpdateDeposit(self.agent))
-    # #         self.action_list.append(ActionBuy(self.agent, self.tag_code_dic['Y']))
-    # #     else:
-    # #         self.action_list.append(ActionBuy(self.agent, self.tag_code_dic['Y']))
-    # #     else:
-    # #     raise ValueError(f'Invalid action_type: {action_type}')
-
-
-    #         '''# (4)이미 보유한 종목, 매수 주문 접수한 종목의 합이 보유 가능 최대치(10개)라면 더 이상 매수 불가하므로 종료
-    #         # ♣ 필요 없을 듯 ♣
-    #         if (self.get_balance_count() + self.get_buy_order_count()) >= 10:
-    #             return
-
-    #         # (5)주문에 사용할 금액 계산(10은 최대 보유 종목 수로써 consts.py에 상수로 만들어 관리하는 것도 좋음)
-    #         budget = self.deposit / (10 - (self.get_balance_count() + self.get_buy_order_count()))
-
-    #         # 최우선 매도호가 확인
-    #         bid = self.kiwoom.universe_realtime_transaction_info[code]['(최우선)매수호가']
-
-    #         # (6)주문 수량 계산(소수점은 제거하기 위해 버림)
-    #         quantity = math.floor(budget / bid)
-
-    #         # (7)주문 주식 수량이 1 미만이라면 매수 불가하므로 체크
-    #         if quantity < 1:
-    #             return
-
-    #         # (8)현재 예수금에서 수수료를 곱한 실제 투입금액(주문 수량 * 주문 가격)을 제외해서 계산
-    #         amount = quantity * bid
-    #         self.deposit = math.floor(self.deposit - amount * 1.00015)
-
-    #         # (8)예수금이 0보다 작아질 정도로 주문할 수는 없으므로 체크
-    #         if self.deposit < 0:
-    #             return
-
-    #         # (9)계산을 바탕으로 지정가 매수 주문 접수
-    #         order_result = self.kiwoom.send_order('send_buy_order', '1001', 1, code, quantity, bid, '00')
-
-    #         # _on_chejan_slot가 늦게 동작할 수도 있기 때문에 미리 약간의 정보를 넣어둠
-    #         self.kiwoom.order[code] = {'주문구분': '매수', '미체결수량': quantity}
-
-    # def get_balance_count(self):
-    #     """매도 주문이 접수되지 않은 보유 종목 수를 계산하는 함수"""
-    #     balance_count = len(self.kiwoom.balance)
-    #     # kiwoom balance에 존재하는 종목이 매도 주문 접수되었다면 보유 종목에서 제외시킴
-    #     for code in self.kiwoom.order.keys():
-    #         if code in self.kiwoom.balance and self.kiwoom.order[code]['주문구분'] == "매도" and self.kiwoom.order[code]['미체결수량'] == 0:
-    #             balance_count = balance_count - 1
-    #     return balance_count
-
-    # def get_buy_order_count(self):
-    #     """매수 주문 종목 수를 계산하는 함수"""
-    #     buy_order_count = 0
-    #     # 아직 체결이 완료되지 않은 매수 주문
-    #     for code in self.kiwoom.order.keys():
-    #         if code not in self.kiwoom.balance and self.kiwoom.order[code]['주문구분'] == "매수":
-    #             buy_order_count = buy_order_count + 1
-    #     return buy_order_count
+        # 매수 신호 확인(조건에 부합하면 주문 접수) ★★★★★★여기에 모델결과 적용★★★★★★
+        if predict_value == 0:
+            print('predict_value:',predict_value)
+            pass
+        elif predict_value == 1: # 1=(kodex_200 매수 & kodex_inverse 매도)
+            print('predict_value:',predict_value)
+            if self.no_record:
+                ## 전부 매수 
+                self.order_buy('069500')
+                self.no_record = False
+                pass
+            else:
+                # 전부 매도
+                self.order_sell('114800')
+                # 전부 매수
+                self.order_buy('069500')
+                pass
+        elif predict_value == 2: # 2=(kodex_200 매도 & kodex_inverse 매수)
+            print('predict_value:',predict_value)
+            if self.no_record:
+                # 전부 매수
+                self.order_buy('114800')
+                self.no_record = False
+                pass
+            else:
+                # 전부 매도
+                self.order_sell('069500')
+                # 전부 매수
+                self.order_buy('114800')
+                pass
