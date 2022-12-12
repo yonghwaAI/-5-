@@ -156,3 +156,4 @@ class Tech_model():
         # print(merged_df.label.value_counts(normalize=False))
 
         merged_df.to_csv('data.csv', index=True)
+        

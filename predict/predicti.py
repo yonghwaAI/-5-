@@ -10,29 +10,31 @@ import pandas as pd
 from xgboost import XGBClassifier
 import pickle
 
+
 class InputBuilder_BaselineModel:
-  @staticmethod
-  def __init__(self, universe:dict):
+  #@staticmethod
+  def __init__(self, universe: dict):
     self.history_minute_dic = {}
     self.unpack(universe)
     self.build_up_input_features()
     self.__X_test = None
     self.merge_and_make_test_input()
 
-  @property
+  #@property
   def X_test(self):
     return self.__X_test
 
   def unpack(self, universe:dict):
-    df_069500 = universe['069500']['price_df']
-    pd.DataFrame.from_records([
-        {'dt':df_069500.dt,'open':df_069500.open, 'high':df_069500.high, 'low':df_069500.low, 'close':df_069500.close, 'volume':df_069500.volume}])
+    df_069500 = universe['069500']['price_df']   
+    df_069500 = pd.DataFrame.from_records([
+        {'dt':df_069500.index,'open':df_069500.open, 'high':df_069500.high, 'low':df_069500.low, 'close':df_069500.close, 'volume':df_069500.volume}])
+    # 오류 : index는 dt type이 아님
     df_069500['dt'] = pd.to_datetime(df_069500['dt'], format='%Y%m%d%H%M').dt.tz_localize('Asia/Seoul')
     df_069500.set_index('dt')
 
     df_114800 = universe['114800']['price_df']
-    pd.DataFrame.from_records([
-        {'dt':df_114800.dt,'open':df_114800.open, 'high':df_114800.high, 'low':df_114800.low, 'close':df_114800.close, 'volume':df_114800.volume}])
+    df_114800 = pd.DataFrame.from_records([
+        {'dt':df_114800.index,'open':df_114800.open, 'high':df_114800.high, 'low':df_114800.low, 'close':df_114800.close, 'volume':df_114800.volume}])
     df_114800['dt'] = pd.to_datetime(df_114800['dt'], format='%Y%m%d%H%M').dt.tz_localize('Asia/Seoul')
     df_114800.set_index('dt')
 
@@ -65,12 +67,14 @@ class InputBuilder_BaselineModel:
        ]
     self.__X_test = merged_df[effective_cols].iloc[[-1]]
 
-# def serve(model):
-#     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-#     prediction_pb2_grpc.add_PredictorServicer_to_server(PredictionServer(model), server)
-#     server.add_insecure_port('[::]:50051')
-#     server.start()
-#     server.wait_for_termination()
+  def make_basic_features(self, df: pd.DataFrame):
+    """
+    df가 변형됨
+    """
+    ma = talib.MA(df['close'], timeperiod=30)
+    macd, macdsignal, macdhist = talib.MACD(df['close'])
+    rsi = talib.RSI(df['close'], timeperiod=14)
+    ad = talib.AD(df['high'], df['low'], df['close'], df['volume'])
 
     df['ma'] = ma
     df['ma20'] = df['close'].rolling(window=20, min_periods=1).mean()
@@ -116,8 +120,8 @@ class InputBuilder_BaselineModel:
 
 
 class BaselineModel:
-  def __init__(self, model_path):
-    with open('predict/automl_baseline2_balanced_10m.pkl', 'rb') as f:
+  def __init__(self):
+    with open('C:/Users/yonghwa/Desktop/4-2/인공지능 금융 통계/AIFT/-AI-financial-investment-team5/model/model_xgboost.pkl', 'rb') as f:
         self.model = pickle.load(f)
 
   def predict(self, X_test):
