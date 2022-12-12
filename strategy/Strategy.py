@@ -153,60 +153,47 @@ class Strategy(QThread):
     
     def run(self):
         """실질적 수행 역할을 하는 함수"""
-        print('\n', self.universe['069500']['price_df'])
-        print('------------------------------------------------------------------------------------------------- \n')
-        # df = self.tech.get_daily_dic(self.universe)
-        
-        input_builder = InputBuilder_BaselineModel(self.universe)
-        y_pred = BaselineModel().predict(input_builder.X_test)
-        print('예측결과 : ', y_pred)
 
-    #     # 접주 주문 및 매수/매도 대상 확인
-    #     while self.is_init_success:
-    #         try:
-    #             # (0)장중인지 확인
-    #             if not check_transaction_open():
-    #                 print("장시간이 아니므로 종료합니다.")
-    #                 sys.exit()
+        # 접주 주문 및 매수/매도 대상 확인
+        while self.is_init_success:
+            try:
+                # (0)장중인지 확인
+                if not check_transaction_open():
+                    print("장시간이 아니므로 종료합니다.")
+                    sys.exit()
 
-    #             for idx, code in enumerate(self.universe.keys()):
-    #                 print('[{}/{}_{}]'.format(idx + 1, len(self.universe), self.universe[code]['code_name']))
-    #                 time.sleep(0.5)
+                for idx, code in enumerate(self.universe.keys()):
+                    print('[{}/{}_{}]'.format(idx + 1, len(self.universe), self.universe[code]['code_name']))
+                    time.sleep(0.5)
+                    
+                    self.check_buy_signal_and_order()
 
-    #                 # (1)접수한 주문이 있는지 확인
-    #                 if code in self.kiwoom.order.keys():
-    #                     # (2)주문이 있음
-    #                     print('접수 주문', self.kiwoom.order[code])
+            except Exception as e:
+                print(traceback.format_exc())
 
-    #                     # (2.1) '미체결수량' 확인하여 미체결 종목인지 확인
-    #                     if self.kiwoom.order[code]['미체결수량'] > 0:
-    #                         pass
+            #         # (1)접수한 주문이 있는지 확인
+            #         if code in self.kiwoom.order.keys():
+            #             # (2)주문이 있음
+            #             print('접수 주문', self.kiwoom.order[code])
 
-    #                 # (3)보유 종목인지 확인
-    #                 elif code in self.kiwoom.balance.keys():
-    #                     print('보유 종목', self.kiwoom.balance[code])
-    #                     # (6)매도 대상 확인
-    #                     if self.check_sell_signal(code):
-    #                         # (7)매도 대상이면 매도 주문 접수
-    #                         self.order_sell(code)
+            #             # (2.1) '미체결수량' 확인하여 미체결 종목인지 확인
+            #             if self.kiwoom.order[code]['미체결수량'] > 0:
+            #                 pass
 
-    #                 else:
-    #                     # (4)접수 주문 및 보유 종목이 아니라면 매수대상인지 확인 후 주문접수
-    #                     self.check_buy_signal_and_order(code)
+            #         # (3)보유 종목인지 확인
+            #         elif code in self.kiwoom.balance.keys():
+            #             print('보유 종목', self.kiwoom.balance[code])
+            #             # (6)매도 대상 확인
+            #             if self.check_sell_signal(code):
+            #                 # (7)매도 대상이면 매도 주문 접수
+            #                 self.order_sell(code)
 
-    #         except Exception as e:
-    #             print(traceback.format_exc())
-            
-    #         # 매매할 때마다(체결이 됐을 때) 얼마에 사고 얼마에 팔았는지, 예수금, 수익률 출력, 기록
-    #         # 장 끝날 때도 출력
-            
-    #         # 초기값 200을 하든 inverse를 하든 매수만
-    #         # 데이터 들어올 때마다 모델에 넣고 예측
-    #         # ㄴ X=(kodex_200 매수 & kodex_inverse 매도), Y=(kodex_200 매도 & kodex_inverse 매수), NOP=Nothing
-            
-    #         # 30분 / 1시간 단위로 계속 자동투자를 진행할 것인지 물어볼까? / 중간에 빠져나오거나(그만)
-    #         # 틱범위 1분 어떨까
-    #         # target 95% → 90%
+            #         else:
+            #             # (4)접수 주문 및 보유 종목이 아니라면 매수대상인지 확인 후 주문접수
+            #             self.check_buy_signal_and_order(code)
+
+            # except Exception as e:
+            #     print(traceback.format_exc())
 
 
     def set_universe_real_time(self):
@@ -281,15 +268,11 @@ class Strategy(QThread):
         self.kiwoom.order[code] = {'주문구분': '매수', '미체결수량': quantity}
 
     def check_buy_signal_and_order(self):
-        """매수 대상인지 확인하고 주문을 접수하는 함수
-        새 data를 universe로 받음, self.input에 넣고 X_test 값을 받음, model에 적용, 
-        nop, x, y에 따라 매수 / 매도
-        """
         # 매수 가능 시간 확인
         if not check_adjacent_transaction_closed():
             return False
 
-        # 실시간 유니버스 만들기
+        ## 실시간 유니버스 만들기
         real_069500 = self.return_real_data('069500')
         real_114800 = self.return_real_data('114800')
 
@@ -298,11 +281,10 @@ class Strategy(QThread):
         real_universe['114800']['price_df'] = real_114800
 
         ## predict > input_value
-        input_builder = InputBuilder_BaselineModel(self.universe)
+        input_builder = InputBuilder_BaselineModel(real_universe)
         predict_value = BaselineModel().predict(input_builder.X_test)
-        # predict_proba = BaselineModel().predict_proba(input_builder.X_test)
-
-        # 매수 신호 확인(조건에 부합하면 주문 접수) ★★★★★★여기에 모델결과 적용★★★★★★
+        
+        ## 매수 신호 확인(조건에 부합하면 주문 접수)
         if predict_value == 0:
             print('predict_value:',predict_value)
             pass
