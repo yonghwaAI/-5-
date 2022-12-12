@@ -5,6 +5,7 @@ import talib
 import pickle
 
 
+
 class Tech_model():
     def __init__(self):
         super().__init__()
