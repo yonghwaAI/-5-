@@ -15,6 +15,8 @@ from flaml.ml import sklearn_metric_loss_score
 from flaml.data import get_output_from_log
 import matplotlib.pyplot as plt
 '''
+from sklearn.model_selection import train_test_split
+from xgboost import XGBClassifier
 
 import pandas as pd
 import numpy as np
@@ -128,15 +130,10 @@ class Tech_model():
         merged_df = pd.read_pickle('.merged_for_baseline2_df.pkl')
         print(merged_df)
         print('target_x 분포 확인 : \n', merged_df.target_x.quantile([0.05, 0.25, 0.5, 0.75, 0.95]))
-
-        # Precision이 높으면 threshold가 높아진다. 
-        # Recall을 높이면 threshold가 낮아진다.
-        # precison을 놓치지 않는 상황에서 recall을 높이는 것이 좋다.
-        # ROC 커브의 중간점은 tpr-fpr이 가장 큰 지점으로, 최적의 threshold 값을 가진다.
         
-        # 1 - target_x의 상위 95%
+        # 1 - target_x의 상위 90%
         decision_up_threshold= merged_df.target_x.quantile(0.90) - 1
-        # 1 - target_x의 하위 5%
+        # 1 - target_x의 하위 10%
         decision_down_threshold= 1 - merged_df.target_x.quantile(0.90)
         print('\nUP: ', decision_up_threshold)
         print('Down : ',decision_down_threshold)
